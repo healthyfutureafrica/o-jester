@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import disclaimer, alert, ai_notice, prob_bar, ring, stance, result_badge, status_label, upgrade, csrf %}
+{% block title %}{% if m %}{{ m.home_team }} – {{ m.away_team }}{% else %}{{ _('matches.title') }}{% endif %}{% endblock %}
+
+{% macro form_dots(form) -%}
+{% if form %}<span class="form-dots">{% for r in form[-5:] %}<span class="{{ r }}">{{ r }}</span>{% endfor %}</span>{% else %}<span class="dim">—</span>{% endif %}
+{%- endmacro %}
+
+{% macro per(goals, games) -%}{{ '%.2f'|format(goals / games) if games else '—' }}{%- endmacro %}
+
+{% block content %}
+<div class="container page">
+  {% if not m %}
+    {{ alert(error, 'warning') }}
+  {% else %}
+  <a class="small dim" href="{{ url_for('tips.matches', date=m.match_date) }}">{{ _('detail.all') }}</a>
+
+  <header class="card card-pad mt-2" style="padding:28px">
+    <div class="upper center">{{ m.league_name }} · {{ m.country }} · {{ fmt_datetime(m.kickoff) }}</div>
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;margin-top:18px">
+      <div class="display" style="text-align:right;font-size:clamp(1.2rem,3vw,1.9rem)">{{ m.home_team }}</div>
+      <div class="center">
+        {% if m.home_goals is not none %}<div class="display" style="font-size:2.2rem">{{ m.home_goals }} - {{ m.away_goals }}</div>{% else %}<div class="display dim">{{ _('ui.vs') }}</div>{% endif %}
+        <div class="mt-1">{{ status_label(m) }}</div>
+      </div>
+      <div class="display" style="font-size:clamp(1.2rem,3vw,1.9rem)">{{ m.away_team }}</div>
+    </div>
+    {% if m.prediction %}<div style="max-width:440px;margin:22px auto 0">{{ prob_bar(m.prediction.probs) }}</div>{% endif %}
+  </header>
+
+  <div class="mt-3">{{ disclaimer() }}</div>
+
+  {% if m.locked %}
+    <div class="card card-pad">{{ upgrade(m.required_plan, m.lock_reason) }}</div>
+  {% elif not m.prediction %}
+    {{ alert(_('detail.soon')) }}
+  {% else %}
+  {% set p = m.prediction %}
+  <div class="split">
+    <div class="stack-lg">
+      <section class="card card-pad">
+        <div class="row between" style="align-items:flex-start;flex-wrap:nowrap">
+          <div>
+            <div class="upper">{{ _('detail.bestPick') }}</div>
+            {% if p.best_pick %}
+              <div class="display mt-1" style="font-size:1.5rem"><span class="c-accent">{{ p.best_pick.short }}</span> · {{ p.best_pick.label }}</div>
+              <div class="small muted mt-1">{{ _('detail.chance', p=fmt_pct(p.best_pick.probability), f=p.best_pick.fair_odds|odds) }}{% if p.best_pick.book_odds %}{{ _('detail.book', o=p.best_pick.book_odds|odds) }}{% endif %}</div>
+            {% else %}<div class="muted mt-1">{{ _('detail.noPick') }}</div>{% endif %}
+            <div class="row mt-2" style="gap:6px">
+              {% if p.ai_stance %}{{ stance(p.ai_stance) }}{% endif %}
+              <span class="badge {{ {'HIGH': 'badge-green', 'MEDIUM': 'badge-gold', 'LOW': 'badge-red'}[p.data_quality] }}">{{ _('detail.data', q=_('detail.quality.' ~ p.data_quality)) }}</span>
+              <span class="badge">xG {{ '%.2f'|format(p.xg.home) }} – {{ '%.2f'|format(p.xg.away) }}</span>
+              {% if p.best_pick and p.best_pick.result %}{{ result_badge(p.best_pick.result) }}{% endif %}
+            </div>
+          </div>
+          <div class="center">{{ ring(p.confidence, 68) }}<div class="tiny dim mt-1">{{ _('ui.confidence') }}</div></div>
+        </div>
+        <p class="small muted mt-3" style="line-height:1.7">{{ p.summary }}</p>
+      </section>
+
+      {% for group in ['RESULT', 'GOALS', 'SCORE'] if p.groups.get(group) %}
+      <section class="card card-pad">
+        <h2 style="margin-bottom:14px">{{ _('detail.group.' ~ group) }}</h2>
+        <div class="grid grid-2" style="gap:8px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))">
+          {% for x in p.groups[group] %}
+          {% set on = (m.id, x.key) in slip_keys %}
+          <div class="market {{ 'on' if on }}">
+            <div style="min-width:0">
+              <div class="small strong truncate">{{ x.label }}</div>
+              <div class="tiny dim">{{ fmt_pct(x.probability, 1) }} · {{ _('detail.fair', f=x.fair_odds|odds) }}{% if x.book_odds %}{{ _('detail.bookShort', o=x.book_odds|odds) }}{% endif %}{% if x.edge and x.edge > 0 %}<span class="c-gold">{{ _('detail.value', p=fmt_pct(x.edge, 1)) }}</span>{% endif %}</div>
+            </div>
+            {% if x.result %}{{ result_badge(x.result) }}
+            {% elif can_build and open %}
+              <form class="inline" method="post" action="{{ url_for('tips.slip_toggle') }}">{{ csrf() }}
+                <input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="market" value="{{ x.key }}"><input type="hidden" name="next" value="{{ request.path }}">
+                <button class="btn-chip btn {{ 'on' if on }}" aria-pressed="{{ 'true' if on else 'false' }}">{{ _('detail.inSlip') if on else _('detail.addSlip') }}</button>
+              </form>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endfor %}
+      {% if not can_build and g.user and open %}<div class="card card-pad">{{ upgrade('PRO', compact=True) }}<p class="tiny dim mt-1">{{ _('detail.upgradeHint') }}</p></div>{% endif %}
+    </div>
+
+    <div class="stack-lg">
+      <section class="card card-pad">
+        <div class="row" style="margin-bottom:10px"><span class="c-accent">✦</span><h2>{{ _('detail.aiTitle') }}</h2></div>
+        {% if p.ai %}
+          <div class="stack small">
+            <div><div class="strong">{{ p.ai.headline }}</div><p class="muted mt-1">{{ p.ai.summary }}</p></div>
+            <div class="tile"><div class="row" style="gap:8px">{{ stance(p.ai.stance) }}<b>{{ p.ai.verdict_label }}</b></div><p class="muted mt-1">{{ p.ai.reasoning }}</p></div>
+            {% for title, items in [(_('detail.keyFactors'), p.ai.key_factors), (_('detail.teamNews'), p.ai.team_news), (_('detail.risks'), p.ai.risks)] if items %}
+            <div><div class="upper" style="margin-bottom:4px">{{ title }}</div><ul class="muted" style="display:grid;gap:4px">{% for f in items %}<li>{{ f }}</li>{% endfor %}</ul></div>
+            {% endfor %}
+            {% if p.ai.sources %}<p class="tiny dim">{{ _('detail.sources') }} {% for s in p.ai.sources %}<a class="link" href="{{ s.url }}" target="_blank" rel="noopener">{{ s.title[:40] }}</a>{{ ' · ' if not loop.last }}{% endfor %}</p>{% endif %}
+            {{ ai_notice() }}
+            {% if p.ai_locked == 'ELITE' %}<div style="border-top:1px solid var(--ink-800);padding-top:12px">{{ upgrade('ELITE', compact=True) }}<p class="tiny dim mt-1">{{ _('detail.eliteHint') }}</p></div>{% endif %}
+          </div>
+        {% elif p.ai_locked %}
+          {{ upgrade(p.ai_locked) }}
+        {% else %}
+          <p class="small muted">{{ _('detail.aiPending') if settings.ai_enabled else _('detail.aiOff') }}</p>
+        {% endif %}
+      </section>
+
+      {% if p.top_scores %}
+      <section class="card card-pad">
+        <h2 style="margin-bottom:14px">{{ _('detail.scores') }}</h2>
+        <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:8px">
+          {% for s in p.top_scores %}<div class="tile center"><div class="display" style="font-size:1.3rem">{{ s.home }}-{{ s.away }}</div><div class="tiny dim">{{ fmt_pct(s.probability, 1) }}</div></div>{% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if m.stats and (m.stats.home or m.stats.away) %}
+      {% set h, a = m.stats.home or {}, m.stats.away or {} %}
+      <section class="card card-pad">
+        <h2 style="margin-bottom:14px">{{ _('detail.form') }}</h2>
+        <table style="width:100%;font-size:14px;border-collapse:collapse">
+          <tr class="muted"><th style="text-align:right">{{ m.home_team }}</th><th></th><th style="text-align:left">{{ m.away_team }}</th></tr>
+          {% for label, hv, av in [
+            (_('detail.stat.position'), h.position or '—', a.position or '—'),
+            (_('detail.stat.form'), form_dots(h.form), form_dots(a.form)),
+            (_('detail.stat.gf'), per(h.gf or 0, h.played), per(a.gf or 0, a.played)),
+            (_('detail.stat.ga'), per(h.ga or 0, h.played), per(a.ga or 0, a.played)),
+            (_('detail.stat.split'), per(h.home_gf or 0, h.home_played), per(a.away_gf or 0, a.away_played))] %}
+          <tr style="border-top:1px solid var(--ink-800)"><td style="text-align:right;padding:9px 0;font-weight:600">{{ hv }}</td><td class="upper center" style="padding:0 12px">{{ label }}</td><td style="font-weight:600">{{ av }}</td></tr>
+          {% endfor %}
+        </table>
+      </section>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,69 @@
+# Render Blueprint — O-Jester production deployment.
+# Render dashboard → New → Blueprint → select this GitHub repository.
+# You will be asked for the secret values marked `sync: false`.
+#
+# Paid plans (Render shows the exact monthly price before you confirm):
+#  - web 0.5c-512mb: always on, so the scheduled data refresh runs on time
+#  - Postgres 0.1c-256mb: persistent database (the free one is deleted after 30 days)
+# Every push to `main` redeploys automatically.
+services:
+  - type: web
+    name: o-jester              # also reachable at https://o-jester.onrender.com
+    runtime: docker
+    plan: 0.5c-512mb
+    region: frankfurt           # closest Render region to Central Africa
+    healthCheckPath: /api/ready # also checks the database
+    autoDeployTrigger: commit
+    envVars:
+      - key: APP_ENV
+        value: production
+      # Public address. Add www.o-jester.com under the service's Settings → Custom Domains
+      # (Render then redirects o-jester.com → www.o-jester.com and issues the HTTPS certificate).
+      - key: APP_URL
+        value: https://www.o-jester.com
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: o-jester-db
+          property: connectionString
+      # --- Real match data (required) ---
+      - key: FOOTBALL_PROVIDER
+        sync: false             # type: api-football  or  football-data
+      - key: API_FOOTBALL_KEY
+        sync: false
+      - key: FOOTBALL_DATA_KEY
+        sync: false
+      # --- Your admin account (created automatically at start-up) ---
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      # --- Payments: simulated until your Flutterwave/PayPal accounts are approved ---
+      - key: PAYMENTS_SANDBOX
+        value: "true"
+      - key: FLUTTERWAVE_SECRET_KEY
+        sync: false
+      - key: FLUTTERWAVE_WEBHOOK_HASH
+        sync: false
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: PAYPAL_MODE
+        value: live
+      # --- Public launch (set BETA_MODE=true to turn it back into a test version) ---
+      - key: BETA_MODE
+        value: "false"
+      # --- Optional AI analyst (leave empty to run on the statistical model only) ---
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+databases:
+  - name: o-jester-db
+    plan: 0.1c-256mb
+    region: frankfurt
+    databaseName: ojester
+    user: ojester

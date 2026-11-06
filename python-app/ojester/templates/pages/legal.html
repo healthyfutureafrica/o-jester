@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ doc.title }}{% endblock %}
+{% block content %}
+<div class="container narrow page">
+  <h1>{{ doc.title }}</h1>
+  <p class="tiny dim mt-1">{{ doc.updated }}: {{ legal.updated }}</p>
+  <p class="small muted mt-3">{{ doc.intro }}</p>
+
+  <nav class="card card-pad mt-3 small">
+    <ol style="margin:0;padding-left:1.1rem;display:grid;gap:6px">
+      {% for s in doc.sections %}<li><a href="#{{ s.id }}" class="{{ 'c-red strong' if s.warning else 'muted' }}">{{ s.title }}</a></li>{% endfor %}
+    </ol>
+  </nav>
+
+  {% for s in doc.sections %}
+  <section id="{{ s.id }}" class="mt-4 {{ 'warning-box' if s.warning }}" style="scroll-margin-top:90px">
+    <h2 class="row {{ 'c-red' if s.warning }}">{% if s.warning %}<span class="age-tag lg" style="font-size:15px">18+</span>{% endif %}{{ s.title }}</h2>
+    <div class="stack small muted mt-2" style="line-height:1.7">
+      {% for para in s.paragraphs %}<p class="{{ 'strong' if s.warning and loop.first }}" {% if s.warning and loop.first %}style="color:var(--ink-100)"{% endif %}>{{ para }}</p>{% endfor %}
+      {% if s.bullets %}<ul style="display:grid;gap:6px">{% for b in s.bullets %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+  </section>
+  {% endfor %}
+
+  <section id="publisher" class="mt-4 small muted row" style="border-top:1px solid var(--ink-800);padding-top:20px;gap:20px;align-items:center">
+    <img src="{{ url_for('static', filename='obblys-logo.png') }}" alt="O-BBLYS Finance Ltd" width="160" height="100">
+    <div>
+    <h3 style="color:var(--ink-100)">{{ doc.publisher }}</h3>
+    <p class="mt-1">{{ legal.publisher.company }} · {{ legal.publisher.registration }}{% if contact %}<br>{{ contact|join(' · ') }}{% endif %}</p>
+    </div>
+  </section>
+  <a class="link small mt-4" style="display:inline-block" href="{{ url_for('public.index') }}">← {{ _('notFound.home') }}</a>
+</div>
+{% endblock %}

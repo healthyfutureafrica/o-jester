@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import alert, csrf %}
+{% block title %}{{ _('feedback.title') }}{% endblock %}
+{% block content %}
+<div class="container page" style="display:flex;justify-content:center">
+  <div class="card card-pad" style="max-width:560px;width:100%;padding:30px">
+    <span class="badge badge-gold">{{ _('feedback.badge') }}</span>
+    <h1 class="mt-2">{{ _('feedback.title') }}</h1>
+    <p class="small muted mt-1">{{ _('feedback.intro') }}</p>
+    <form method="post" class="stack mt-3">{{ csrf() }}
+      <input type="hidden" name="page" value="{{ page }}">
+      {{ alert(error, 'error') }}
+      <fieldset style="border:0;padding:0;margin:0">
+        <legend class="label">{{ _('feedback.rating') }}</legend>
+        <div class="rating">
+          {% for n in [5, 4, 3, 2, 1] %}<input type="radio" id="r{{ n }}" name="rating" value="{{ n }}" {{ 'checked' if values.rating == n|string }}><label for="r{{ n }}" title="{{ n }}/5">★</label>{% endfor %}
+        </div>
+      </fieldset>
+      <div>
+        <label class="label" for="category">{{ _('feedback.category') }}</label>
+        <select class="input" id="category" name="category" required>
+          <option value="">—</option>
+          {% for c in categories %}<option value="{{ c }}" {{ 'selected' if values.category == c }}>{{ _('feedback.cat.' ~ c) }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="label" for="message">{{ _('feedback.message') }}</label>
+        <textarea class="input" id="message" name="message" rows="6" minlength="5" maxlength="2000" required placeholder="{{ _('feedback.placeholder') }}">{{ values.message }}</textarea>
+      </div>
+      <div class="grid grid-2" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+        <div><label class="label" for="name">{{ _('feedback.name') }} <span class="dim">{{ _('auth.optional') }}</span></label><input class="input" id="name" name="name" maxlength="80" value="{{ values.name }}"></div>
+        <div><label class="label" for="contact">{{ _('feedback.contact') }} <span class="dim">{{ _('auth.optional') }}</span></label><input class="input" id="contact" name="contact" maxlength="120" value="{{ values.contact }}" placeholder="email / WhatsApp"></div>
+      </div>
+      {% if page %}<p class="tiny dim">{{ _('feedback.pageNote', page=page) }}</p>{% endif %}
+      <button class="btn btn-primary btn-lg btn-block">{{ _('feedback.send') }}</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

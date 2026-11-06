@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import alert, csrf %}
+{% block title %}{{ plan.name[g.lang] }}{% endblock %}
+{% block content %}
+<div class="container page">
+  <a class="small dim" href="{{ url_for('public.pricing') }}">{{ _('checkout.back') }}</a>
+  <div class="split mt-2" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+    <aside class="card card-pad" style="height:fit-content">
+      <div class="upper">{{ _('checkout.getting') }}</div>
+      <h1 class="mt-1">O-Jester {{ plan.name[g.lang] }}</h1>
+      <p class="small muted">{{ plan.tagline[g.lang] }}</p>
+      <div class="display mt-3" style="font-size:2.3rem">{{ fmt_xaf(plan.price_xaf) }} <span class="small dim" style="font-family:var(--font);font-weight:400">{{ _('checkout.per30') }}</span></div>
+      <ul class="small muted mt-3" style="list-style:none;padding:0;display:grid;gap:8px">{% for f in plan.features[g.lang][:6] %}<li><span class="c-accent">✓</span> {{ f }}</li>{% endfor %}</ul>
+      {% if note %}<div class="mt-3">{{ alert(note) }}</div>{% endif %}
+      <p class="tiny dim mt-3">{{ _('checkout.notBet') }}</p>
+    </aside>
+
+    <form method="post" class="card card-pad">{{ csrf() }}
+      <h2>{{ _('checkout.method') }}</h2>
+      <div class="stack mt-2">
+        {% for m, available in methods %}
+        <label class="radio-card {{ 'disabled' if not available }}">
+          <input type="radio" name="method" value="{{ m }}" {{ 'checked' if m == method }} {{ 'disabled' if not available }}>
+          <span style="font-size:1.5rem" aria-hidden="true">{{ {'MOBILE_MONEY': '📱', 'CARD': '💳', 'PAYPAL': '🅿️'}[m] }}</span>
+          <span style="flex:1"><span class="strong" style="display:block">{{ _('checkout.m.' ~ m) }}</span><span class="tiny dim">{{ _('checkout.m.' ~ m ~ '.detail', c=settings.paypal_currency) if available else _('checkout.unavailable') }}</span></span>
+          {% if m == 'PAYPAL' %}<span class="small muted">≈ {{ fmt_euro(eur) }}</span>{% endif %}
+        </label>
+        {% endfor %}
+      </div>
+
+      <fieldset class="stack mt-3" style="border:0;padding:0;margin-top:20px">
+        <div class="row" role="radiogroup" style="flex-wrap:nowrap">
+          <label class="radio-card net-mtn" style="flex:1;justify-content:center;font-weight:700"><input type="radio" name="network" value="MTN" checked class="hide">{{ _('checkout.mtn') }}</label>
+          <label class="radio-card net-orange" style="flex:1;justify-content:center;font-weight:700"><input type="radio" name="network" value="ORANGE" class="hide">{{ _('checkout.orange') }}</label>
+        </div>
+        <div>
+          <label class="label" for="phone">{{ _('checkout.number', net='MTN / Orange') }}</label>
+          <input class="input" id="phone" name="phone" type="tel" placeholder="6XX XXX XXX" value="{{ phone }}">
+          <p class="help">{{ _('checkout.numberHelp') }}</p>
+        </div>
+      </fieldset>
+      <p class="tiny dim mt-2">{{ _('checkout.paypalNote', eur=fmt_euro(eur)) }}</p>
+
+      {% if error %}<div class="mt-3">{{ alert(error, 'error') }}</div>{% endif %}
+      <button class="btn btn-primary btn-lg btn-block mt-3">{{ _('checkout.pay', amount=fmt_xaf(plan.price_xaf)) }}</button>
+      <p class="tiny dim center mt-2">{{ _('checkout.secure', provider='Flutterwave / PayPal', sandbox=_('checkout.sandbox') if settings.payments_sandbox else '') }}</p>
+    </form>
+  </div>
+</div>
+{% endblock %}

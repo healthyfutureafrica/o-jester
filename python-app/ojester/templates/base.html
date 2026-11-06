@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="{{ g.lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0e27">
+  <meta name="description" content="{{ _('footer.tagline') }}">
+  <title>{% block title %}O-Jester{% endblock %} · O-Jester</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  {% if settings.beta_mode %}<meta name="robots" content="noindex, nofollow">{% endif %}
+  {% block head %}{% endblock %}
+</head>
+<body>
+{% from "partials/ui.html" import plan_badge, lang_switch %}
+{% if settings.beta_mode %}<div class="banner banner-beta">🧪 {{ _('beta.banner') }} <a href="{{ url_for('feedback.form', page=request.path) }}">{{ _('beta.giveFeedback') }} →</a></div>
+{% elif settings.payments_sandbox %}<div class="banner">{{ _('banner.sandbox') }}</div>{% endif %}
+{% set nav = [
+  ('tips.combos', 'nav.combos'), ('tips.matches', 'nav.matches'), ('tips.builder', 'nav.builder'),
+  ('public.results', 'nav.results'), ('public.pricing', 'nav.pricing')] %}
+<header class="site-header">
+  <div class="container nav">
+    <a class="logo" href="{{ url_for('public.index') }}" aria-label="O-Jester"><img src="{{ url_for('static', filename='logo.svg') }}" alt=""><span>O<span class="c-gold">-</span>Jester</span></a>
+    <nav class="nav-links" aria-label="Main">
+      {% for ep, key in nav %}<a href="{{ url_for(ep) }}" class="{{ 'active' if request.endpoint == ep }}">{{ _(key) }}</a>{% endfor %}
+    </nav>
+    <div class="nav-right">
+      {{ lang_switch() }}
+      {% if g.user %}
+        {% if g.plan %}{{ plan_badge(g.plan) }}{% else %}<a class="btn btn-gold btn-sm" href="{{ url_for('public.pricing') }}">{{ _('nav.subscribe') }}</a>{% endif %}
+        {% if g.user.role == 'ADMIN' %}<a class="navlink" href="{{ url_for('admin.dashboard') }}">{{ _('nav.admin') }}</a>{% endif %}
+        <a class="navlink" href="{{ url_for('account.account') }}">{{ g.user.name.split(' ')[0] }}</a>
+        <form class="inline" method="post" action="{{ url_for('account.logout') }}"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="btn btn-ghost btn-sm">{{ _('nav.logout') }}</button></form>
+      {% else %}
+        <a class="navlink" href="{{ url_for('account.login') }}">{{ _('nav.login') }}</a>
+        <a class="btn btn-primary btn-sm" href="{{ url_for('account.register') }}">{{ _('nav.getStarted') }}</a>
+      {% endif %}
+    </div>
+    <div class="mobile-bar">
+      {{ lang_switch() }}
+      <details class="mobile-nav">
+        <summary aria-label="{{ _('nav.menu') }}">☰</summary>
+        <div class="mobile-menu">
+          {% for ep, key in nav %}<a href="{{ url_for(ep) }}">{{ _(key) }}</a>{% endfor %}
+          {% if g.user %}
+            {% if g.user.role == 'ADMIN' %}<a href="{{ url_for('admin.dashboard') }}">{{ _('nav.admin') }}</a>{% endif %}
+            <a href="{{ url_for('account.account') }}">{{ _('nav.account') }} {% if g.plan %}{{ plan_badge(g.plan) }}{% endif %}</a>
+            <form method="post" action="{{ url_for('account.logout') }}"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="btn btn-ghost">{{ _('nav.logout') }}</button></form>
+          {% else %}
+            <a href="{{ url_for('account.login') }}">{{ _('nav.login') }}</a>
+            <a class="btn btn-primary" href="{{ url_for('account.register') }}">{{ _('nav.getStarted') }}</a>
+          {% endif %}
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main>{% block content %}{% endblock %}</main>
+
+{% set slip_count = (session.get('slip') or [])|length %}
+{% if settings.beta_mode and request.endpoint not in ('feedback.form', 'feedback.thanks') %}
+  <a class="feedback-fab" href="{{ url_for('feedback.form', page=request.path) }}">💬 {{ _('beta.feedbackShort') }}</a>
+{% endif %}
+{% if slip_count and request.endpoint != 'tips.builder' %}
+  <a class="slip-fab" href="{{ url_for('tips.builder') }}">🧾 {{ _('slipFab.label') }}<span>{{ slip_count }}</span></a>
+{% endif %}
+
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div>
+      <a class="logo" href="{{ url_for('public.index') }}"><img src="{{ url_for('static', filename='logo.svg') }}" alt=""><span>O<span class="c-gold">-</span>Jester</span></a>
+      <p class="small dim mt-2">{{ _('footer.tagline') }}</p>
+      <p class="tiny dim mt-2">{{ _('footer.pay') }}</p>
+      <a class="publisher mt-3" href="{{ url_for('public.legal') }}#publisher">
+        <img src="{{ url_for('static', filename='obblys-logo.png') }}" alt="O-BBLYS Finance Ltd" width="112" height="70">
+        <span><span class="tiny dim">{{ _('footer.productOf') }}</span><br><b>{{ legal.publisher.company }}</b></span>
+      </a>
+    </div>
+    <div>
+      <h4>{{ _('footer.product') }}</h4>
+      <ul>
+        <li><a href="{{ url_for('tips.combos') }}">{{ _('footer.todayCombos') }}</a></li>
+        <li><a href="{{ url_for('public.results') }}">{{ _('nav.results') }}</a></li>
+        <li><a href="{{ url_for('public.pricing') }}">{{ _('nav.pricing') }}</a></li>
+        <li><a href="{{ url_for('feedback.form', page=request.path) }}">{{ _('beta.giveFeedback') }}</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>{{ _('footer.legal') }}</h4>
+      <ul>
+        <li><a href="{{ url_for('public.legal') }}">{{ _('footer.notice') }}</a></li>
+        <li><a href="{{ url_for('public.legal') }}#minors">{{ _('footer.minors') }}</a></li>
+        <li><a href="{{ url_for('public.legal') }}#responsible">{{ _('footer.responsible') }}</a></li>
+        <li><a href="{{ url_for('public.legal') }}#terms">{{ _('footer.terms') }}</a></li>
+        <li><a href="{{ url_for('public.legal') }}#privacy">{{ _('footer.privacy') }}</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="container footer-legal">
+    <span class="age-tag" style="height:fit-content">18+</span>
+    <p>{{ _('footer.strip') }} © {{ now_year() }} O-Jester</p>
+  </div>
+</footer>
+<script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</body>
+</html>

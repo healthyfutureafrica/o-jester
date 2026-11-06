@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ _('return.confirming') }}{% endblock %}
+{% block head %}
+{% if p.status == 'PENDING' and attempts < 40 %}<meta http-equiv="refresh" content="3;url={{ url_for('account.payment_return', reference=reference, n=attempts + 1) }}">{% endif %}
+{% endblock %}
+{% block content %}
+<div class="container page" style="display:flex;justify-content:center">
+  <div class="card card-pad center" style="max-width:440px;width:100%;padding:32px">
+    {% if p.status == 'PENDING' %}
+      <div class="spinner"></div>
+      <h1 class="mt-3" style="font-size:1.4rem">{{ _('return.confirming') }}</h1>
+      <p class="small muted mt-2">{{ _('return.slow') if attempts >= 40 else _('return.approve') }}</p>
+      <p class="tiny dim mt-2">{{ _('return.refreshing') }}</p>
+    {% elif p.status == 'SUCCEEDED' %}
+      <div style="font-size:3rem">🎉</div>
+      <h1 class="mt-2">{{ _('return.success') }}</h1>
+      {% if sub %}<p class="muted mt-2">{{ _('return.active', plan=plan_name(p.plan), date=fmt_date(sub.ends_at)) }}</p>{% endif %}
+      <p class="tiny dim mt-1">{{ _('return.ref', ref=p.reference) }}</p>
+      <a class="btn btn-primary btn-lg btn-block mt-3" href="{{ url_for('tips.combos') }}">{{ _('return.see') }}</a>
+    {% else %}
+      <div style="font-size:3rem">⚠️</div>
+      <h1 class="mt-2" style="font-size:1.4rem">{{ _('return.cancelled') if p.status == 'CANCELLED' else _('return.failed') }}</h1>
+      <p class="small muted mt-2">{{ _('return.failedBody') }}</p>
+      <a class="btn btn-primary btn-lg btn-block mt-3" href="{{ url_for('account.checkout', plan=p.plan) }}">{{ _('return.retry') }}</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

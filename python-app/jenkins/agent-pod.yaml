@@ -1,0 +1,43 @@
+# Jenkins build agent (Kubernetes plugin). One pod per build:
+#  - python : tests, security audit, kubectl/kustomize for validation & deploys
+#  - kaniko : builds and pushes the Docker image without a Docker daemon
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - name: python
+      image: python:3.12-slim
+      command: ["sleep"]
+      args: ["infinity"]
+      env:
+        - name: PIP_DISABLE_PIP_VERSION_CHECK
+          value: "1"
+      resources:
+        requests:
+          cpu: 500m
+          memory: 768Mi
+        limits:
+          memory: 1536Mi
+    - name: kaniko
+      # Kaniko builds OCI images in an unprivileged container. If your cluster policy
+      # requires it, swap for Chainguard's maintained kaniko fork or BuildKit rootless.
+      image: gcr.io/kaniko-project/executor:v1.23.2-debug
+      command: ["sleep"]
+      args: ["infinity"]
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          memory: 3Gi
+      volumeMounts:
+        - name: registry-credentials
+          mountPath: /kaniko/.docker
+  volumes:
+    # docker-registry Secret in the Jenkins agents' namespace with push access to the registry.
+    - name: registry-credentials
+      secret:
+        secretName: registry-credentials
+        items:
+          - key: .dockerconfigjson
+            path: config.json

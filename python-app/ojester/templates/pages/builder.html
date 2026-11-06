@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import disclaimer, alert, ai_notice, upgrade, copy_tools, csrf %}
+{% block title %}{{ _('builder.title') }}{% endblock %}
+{% block content %}
+<div class="container page">
+  {% set max_picks = g.limits.builder_max_picks %}
+  {% if not g.user or max_picks == 0 %}
+    <h1>{{ _('builder.title') }}</h1><p class="small muted mt-1">{{ _('builder.lockedSub') }}</p>
+    <div class="card card-pad mt-3" style="padding:40px">{{ upgrade('PRO', 'UPGRADE' if g.user else 'SUBSCRIBE') }}<p class="small dim center mt-2">{{ _('builder.lockedNote') }}</p></div>
+  {% else %}
+  <div class="row between" style="align-items:flex-end;margin-bottom:18px">
+    <div><h1>{{ _('builder.title') }}</h1><p class="small muted mt-1">{{ _('builder.sub', limit=_('builder.unlimited') if max_picks >= 30 else _('builder.limit', n=max_picks)) }}</p></div>
+    {% if evaluation and evaluation.legs %}<form method="post" action="{{ url_for('tips.slip_clear') }}">{{ csrf() }}<button class="btn btn-ghost btn-sm">{{ _('builder.clear') }}</button></form>{% endif %}
+  </div>
+  {{ disclaimer() }}
+
+  {% if error %}{{ alert(error, 'warning') }}{% endif %}
+  {% if not evaluation or not evaluation.legs %}
+    {% if not error %}
+    <div class="card card-pad center"><div style="font-size:2rem">🧾</div><h3 class="mt-1">{{ _('builder.emptyTitle') }}</h3>
+      <p class="small muted mt-1">{{ _('builder.empty1') }} <a class="link" href="{{ url_for('tips.matches') }}">{{ _('builder.emptyLink') }}</a> {{ _('builder.empty2') }}</p></div>
+    {% endif %}
+  {% else %}
+  {% set weak = {} %}{% if review %}{% for w in review.weak_links %}{% if weak.update({w.match_id: w.reason}) %}{% endif %}{% endfor %}{% endif %}
+  <div class="split">
+    <div class="card divide" style="height:fit-content">
+      {% for l in evaluation.legs %}
+      <div class="leg" {% if weak.get(l.match_id) %}style="background:rgb(239 68 68 / .05)"{% endif %}>
+        <div style="min-width:0">
+          <a class="strong truncate" style="display:block" href="{{ url_for('tips.match', match_id=l.match_id) }}">{{ l.home_team }} {{ _('ui.vs') }} {{ l.away_team }}</a>
+          <div class="tiny dim">{{ l.league_name }} · {{ fmt_time(l.kickoff) }}</div>
+          <div class="small muted mt-1">{{ l.label }}</div>
+          {% if weak.get(l.match_id) %}<div class="tiny c-red mt-1">⚠ {{ weak[l.match_id] }}</div>{% endif %}
+        </div>
+        <div class="row" style="flex-wrap:nowrap">
+          <div style="text-align:right"><div class="strong"><span class="c-accent">{{ l.short }}</span> @ {{ l.odds|odds }}</div><div class="tiny dim">{{ fmt_pct(l.probability) }}</div></div>
+          <form class="inline" method="post" action="{{ url_for('tips.slip_remove') }}">{{ csrf() }}<input type="hidden" name="match_id" value="{{ l.match_id }}"><button class="btn btn-ghost btn-sm" aria-label="{{ _('builder.remove') }}">✕</button></form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <aside class="stack-lg">
+      <div class="card card-pad">
+        <div class="row between" style="align-items:flex-end">
+          <div><div class="upper">{{ _('builder.total') }}</div><div class="display c-gold" style="font-size:2.4rem">{{ evaluation.total_odds|odds }}</div></div>
+          <div style="text-align:right"><div class="upper">{{ _('builder.chance') }}</div><div class="display" style="font-size:1.6rem">{{ fmt_pct(evaluation.probability, 1 if evaluation.probability < 0.1 else 0) }}</div></div>
+        </div>
+        {% if evaluation.estimated %}<p class="tiny dim mt-2">{{ _('builder.estimated') }}</p>{% endif %}
+        {% for key, vars in evaluation.warnings %}<div class="mt-2">{{ alert(_(key, **vars), 'warning') }}</div>{% endfor %}
+        <div class="row mt-3">{{ copy_tools('copy-slip', _('builder.copyTitle'), evaluation.legs, evaluation.total_odds) }}</div>
+      </div>
+
+      <div class="card card-pad stack">
+        <div class="row"><span class="c-accent">✦</span><h2>{{ _('builder.aiTitle') }}</h2></div>
+        {% if g.limits.slip_reviews_per_day == 0 %}
+          {{ upgrade('ELITE', compact=True) }}
+        {% elif not ai_enabled %}
+          <p class="small dim">{{ _('builder.aiDisabled') }}</p>
+        {% else %}
+          <p class="small muted">{{ _('builder.aiIntro') }}</p>
+          <form method="post" action="{{ url_for('tips.slip_review') }}">{{ csrf() }}<button class="btn btn-gold btn-block" {{ 'disabled' if reviews_left == 0 }}>{{ _('builder.review') }}</button></form>
+          {{ alert(review_error, 'error') }}
+          {% if review %}
+            <span class="badge {{ {'LOW': 'badge-green', 'MEDIUM': 'badge-gold'}.get(review.overall_risk, 'badge-red') }}">{{ _('risk.' ~ review.overall_risk) }}</span>
+            <p class="small muted">{{ review.verdict }}</p>
+            {% if review.suggestions %}<ul class="small muted" style="display:grid;gap:4px">{% for s in review.suggestions %}<li>{{ s }}</li>{% endfor %}</ul>{% endif %}
+          {% endif %}
+          {% if reviews_left is not none %}<p class="tiny dim">{{ _('builder.reviewsLeft', n=reviews_left) }}</p>{% endif %}
+          {{ ai_notice() }}
+        {% endif %}
+      </div>
+      <a class="btn btn-outline btn-block" href="{{ url_for('tips.matches') }}">{{ _('builder.addMore') }}</a>
+    </aside>
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

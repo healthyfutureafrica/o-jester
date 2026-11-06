@@ -1,0 +1,12 @@
+.venv/
+.env
+instance/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Kubernetes: rendered releases and real secrets never go to git
+deploy/k8s/.release/
+deploy/k8s/secrets.*.env
+!deploy/k8s/secrets.example.env
+reports/

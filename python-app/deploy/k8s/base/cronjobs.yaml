@@ -1,0 +1,135 @@
+# Background data jobs. Running them as CronJobs (instead of inside the web pods)
+# guarantees each runs exactly once, however many web replicas there are.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: o-jester-refresh
+  labels:
+    app.kubernetes.io/component: worker
+spec:
+  # Fetch real fixtures, odds & tables → predictions → optional AI → combos → settle.
+  schedule: "5 */3 * * *"
+  timeZone: Africa/Douala
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 2700
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/component: worker
+        spec:
+          restartPolicy: Never
+          serviceAccountName: o-jester
+          automountServiceAccountToken: false
+          imagePullSecrets:
+            - name: registry-pull
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: refresh
+              image: o-jester
+              command: ["python", "manage.py", "refresh"]
+              envFrom:
+                - configMapRef:
+                    name: o-jester-config
+                - secretRef:
+                    name: o-jester-secrets
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: instance
+                  mountPath: /app/instance
+                - name: tmp
+                  mountPath: /tmp
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 192Mi
+                limits:
+                  memory: 512Mi
+          volumes:
+            - name: instance
+              emptyDir: {}
+            - name: tmp
+              emptyDir: {}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: o-jester-scores
+  labels:
+    app.kubernetes.io/component: worker
+spec:
+  # Live scores & settlement — only calls the data provider while matches are in play.
+  schedule: "*/15 * * * *"
+  timeZone: Africa/Douala
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 840
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/component: worker
+        spec:
+          restartPolicy: Never
+          serviceAccountName: o-jester
+          automountServiceAccountToken: false
+          imagePullSecrets:
+            - name: registry-pull
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: scores
+              image: o-jester
+              command: ["python", "manage.py", "scores"]
+              envFrom:
+                - configMapRef:
+                    name: o-jester-config
+                - secretRef:
+                    name: o-jester-secrets
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: instance
+                  mountPath: /app/instance
+                - name: tmp
+                  mountPath: /tmp
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  memory: 384Mi
+          volumes:
+            - name: instance
+              emptyDir: {}
+            - name: tmp
+              emptyDir: {}

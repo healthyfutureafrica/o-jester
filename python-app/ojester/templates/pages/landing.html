@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import disclaimer, ring %}
+{% from "partials/cards.html" import plan_cards %}
+{% block title %}{{ _('landing.badge')|replace('✦ ', '') }}{% endblock %}
+{% block content %}
+<section class="container section split split-hero" style="padding-top:56px">
+  <div>
+    <span class="badge badge-bronze">{{ _('landing.badge') }}</span>
+    <h1 class="huge mt-3">{{ _('landing.title1') }}<br><span class="gradient-text">{{ _('landing.title2') }}</span><br>{{ _('landing.title3') }}</h1>
+    <p class="muted mt-3" style="font-size:1.1rem;max-width:560px">{{ _('landing.lead') }}</p>
+    <div class="row mt-4">
+      <a class="btn btn-primary btn-lg" href="{{ url_for('tips.combos') if g.user else url_for('account.register') }}">{{ _('landing.ctaApp') if g.user else _('landing.ctaStart') }}</a>
+      <a class="btn btn-outline btn-lg" href="{{ url_for('public.pricing') }}">{{ _('landing.ctaPlans') }}</a>
+    </div>
+    <div class="row mt-4 small muted" style="gap:28px">
+      <div><div class="display big" style="color:var(--ink-100)">{{ teaser.fixtures_today }}</div>{{ _('landing.statFixtures') }}</div>
+      <div><div class="display big" style="color:var(--ink-100)">37</div>{{ _('landing.statLeagues') }}</div>
+      <div><div class="display big" style="color:var(--ink-100)">{{ record.legs.rate ~ '%' if record.legs.rate is not none else '—' }}</div>{{ _('landing.statLegs') }}</div>
+    </div>
+  </div>
+  <div class="card card-pad">
+    <span class="badge badge-green">{{ _('landing.freePick') }}</span>
+    {% set p = teaser.pick %}
+    {% if p %}
+      <div class="upper mt-3">{{ p.league_name }} · {{ fmt_time(p.kickoff) }}</div>
+      <div class="display mt-1" style="font-size:1.5rem">{{ p.home_team }} <span class="dim">{{ _('ui.vs') }}</span> {{ p.away_team }}</div>
+      <div class="tile row between mt-3" style="flex-wrap:nowrap">
+        <div>
+          <div class="tiny dim">{{ _('landing.ourPick') }}</div>
+          <div class="strong" style="font-size:1.1rem"><span class="c-accent">{{ p.short }}</span> · {{ p.label }}</div>
+          <div class="small muted mt-1">{{ _('match.chance', p=fmt_pct(p.probability)) }}{% if p.odds %}{{ _('landing.oddsSuffix', o=p.odds|odds) }}{% endif %}</div>
+        </div>
+        {{ ring(p.confidence) }}
+      </div>
+      <p class="small muted mt-2">{{ _('landing.freePickMore') }}</p>
+      <p class="tiny dim mt-2">{{ _('ai.mistakes') }}</p>
+    {% else %}
+      <p class="muted mt-3">{{ _('landing.freePickEmpty') }}</p>
+    {% endif %}
+  </div>
+</section>
+
+<div class="container">{{ disclaimer() }}</div>
+
+<section class="container section">
+  <h2 class="center" style="font-size:1.9rem">{{ _('landing.howTitle') }}</h2>
+  <div class="grid grid-3 mt-4">
+    {% for n in [1, 2, 3] %}
+    <div class="card card-pad"><div class="display c-gold" style="font-size:1.8rem">0{{ n }}</div><h3 class="mt-2">{{ _('landing.step%d.title'|format(n)) }}</h3><p class="small muted mt-1">{{ _('landing.step%d.text'|format(n)) }}</p></div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="container section">
+  <div class="grid grid-3">
+    {% for icon in ['📊', '🧠', '💎', '🌍', '🧾', '✅'] %}
+    <div class="card-pad" style="border:1px solid var(--ink-800);border-radius:16px"><div style="font-size:1.5rem">{{ icon }}</div><h3 class="mt-2">{{ _('landing.f%d.title'|format(loop.index)) }}</h3><p class="small muted mt-1">{{ _('landing.f%d.text'|format(loop.index)) }}</p></div>
+    {% endfor %}
+  </div>
+</section>
+
+{% if record.combos.settled %}
+<section class="container section">
+  <div class="card card-pad grid grid-4" style="align-items:center">
+    <div><h2>{{ _('landing.recordTitle') }}</h2><p class="small muted mt-1">{{ _('landing.recordSub') }}</p></div>
+    {% for key, st in [('landing.recordCombos', record.combos), ('landing.recordLegs', record.legs), ('landing.recordBest', record.best)] %}
+    <div class="tile center"><div class="display big c-accent">{{ st.rate ~ '%' if st.rate is not none else '—' }}</div><div class="small muted">{{ _(key) }}</div><div class="tiny dim">{{ st.won }}/{{ st.settled }}</div></div>
+    {% endfor %}
+  </div>
+  <p class="tiny dim mt-1">{{ _('results.past') }}</p>
+</section>
+{% endif %}
+
+<section class="container section" id="pricing">
+  <h2 class="center" style="font-size:1.9rem">{{ _('landing.pricingTitle') }}</h2>
+  <p class="center muted mt-1">{{ _('landing.pricingSub') }}</p>
+  <div class="mt-4">{{ plan_cards(plans) }}</div>
+</section>
+
+<section class="container section narrow">
+  <h2 class="center" style="font-size:1.9rem">{{ _('landing.faqTitle') }}</h2>
+  <div class="stack mt-4">
+    {% for n in range(1, 6) %}
+    <details class="card faq" {{ 'open' if n == 1 }}><summary>{{ _('landing.faq%d.q'|format(n)) }}</summary><p class="small muted mt-2">{{ _('landing.faq%d.a'|format(n)) }}</p></details>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

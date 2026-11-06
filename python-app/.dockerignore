@@ -1,0 +1,15 @@
+.venv/
+.env
+instance/
+tests/
+__pycache__/
+*.pyc
+.pytest_cache/
+start.bat
+deploy/
+jenkins/
+Jenkinsfile
+render.yaml
+*.md
+reports/
+.git/

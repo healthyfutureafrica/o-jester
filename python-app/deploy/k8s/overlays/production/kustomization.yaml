@@ -1,0 +1,25 @@
+# PRODUCTION — public launch. Uses a managed PostgreSQL (DATABASE_URL in the
+# o-jester-secrets Secret), real payments, beta mode off. Deployed from `main`
+# after manual approval in Jenkins.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: o-jester
+
+resources:
+  - namespace.yaml
+  - networkpolicy.yaml
+  - ../../base
+
+labels:
+  - pairs:
+      app.kubernetes.io/instance: production
+
+configMapGenerator:
+  - name: o-jester-config
+    behavior: merge
+    literals:
+      - APP_URL=https://www.o-jester.com
+      - BETA_MODE=false
+      - PAYMENTS_SANDBOX=false
+      - PAYPAL_MODE=live

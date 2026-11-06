@@ -1,0 +1,10 @@
+# In-cluster PostgreSQL (single instance with a persistent volume).
+# Good for staging and small self-hosted setups. For production, prefer a managed
+# database (DigitalOcean, AWS RDS, Google Cloud SQL…) and leave this component out.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - statefulset.yaml
+  - service.yaml
+  - networkpolicy.yaml

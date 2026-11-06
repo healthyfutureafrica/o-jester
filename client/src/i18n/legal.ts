@@ -1,0 +1,189 @@
+import type { Lang } from ".";
+
+/**
+ * Publisher identification shown on the legal page.
+ * Replace these placeholders with the operating company's real details before launch.
+ */
+export const PUBLISHER = {
+  company: "O-BBLYS Finance Ltd",
+  registration: "RCCM TPPRR/RC/BUA/2026/B/0170",
+  address: "[Registered address], Cameroon",
+  email: "[contact email]",
+};
+
+export interface LegalSection {
+  id: string;
+  title: string;
+  warning?: boolean;
+  paragraphs: string[];
+  bullets?: string[];
+}
+
+export const LEGAL_UPDATED = "2026-10-21";
+
+export const LEGAL: Record<Lang, { title: string; intro: string; updated: string; publisher: string; sections: LegalSection[] }> = {
+  en: {
+    title: "Legal notice & disclaimer",
+    intro:
+      "Please read this notice carefully before using O-Jester. By accessing or using the service, you acknowledge that you have read, understood and accepted it in full. If you do not accept it, you must not use the service.",
+    updated: "Last updated",
+    publisher: "Publisher",
+    sections: [
+      {
+        id: "notice",
+        title: "1. Nature of the service — O-Jester is not a betting operator",
+        paragraphs: [
+          "O-Jester is an information and analysis service that publishes football (soccer) prediction tips based on real-world fixtures. O-Jester is not a bookmaker, betting operator, casino, gaming establishment, broker or financial adviser.",
+          "O-Jester does not accept bets or wagers, does not collect stakes, does not hold funds intended for gambling and does not pay out any winnings. O-Jester is not affiliated with, sponsored by or endorsed by any bookmaker, league, competition or club. Team and competition names are used for identification purposes only.",
+          "Subscription fees are paid solely for access to editorial content (predictions, statistics and analysis). They are not stakes and never entitle the subscriber to any winnings.",
+        ],
+      },
+      {
+        id: "disclaimer",
+        title: "2. No guarantee — limits of statistical models and artificial intelligence",
+        paragraphs: [
+          "All predictions, probabilities, confidence scores, combinations and analyses are estimates produced by statistical models and artificial intelligence (including Claude, a model developed by Anthropic). They are opinions about uncertain future events, not statements of fact.",
+          "Artificial intelligence can make mistakes. It may misinterpret information, rely on incomplete, outdated or incorrect sources, or produce errors. Match data and odds are supplied by third-party providers and may be delayed, incomplete or inaccurate.",
+          "No result is ever guaranteed. Past performance, including our published track record, is not an indication of future results. Nothing on O-Jester constitutes financial, investment or professional advice. You must not rely on our content as the sole basis for any decision.",
+        ],
+      },
+      {
+        id: "minors",
+        title: "3. Protection of minors — strictly prohibited under 18",
+        warning: true,
+        paragraphs: [
+          "WARNING: Betting, gambling and games of chance are prohibited for persons under eighteen (18) years of age. Access to O-Jester is strictly reserved for adults aged 18 and over.",
+          "By using the service, you declare on your honour that you are at least 18 years old. Registration requires your date of birth and is automatically refused to anyone under 18. Any account found to belong to a minor will be closed immediately. Providing false information about your age is a serious breach of these terms and may engage your personal responsibility.",
+          "Facilitating or encouraging gambling by minors may constitute an offence under applicable law. Parents and guardians are strongly encouraged to supervise the online activity of minors in their care and to use parental-control tools. O-Jester declines all liability for any use of the service by a minor in breach of these terms or by means of false age information.",
+        ],
+      },
+      {
+        id: "responsible",
+        title: "4. Responsible gambling",
+        paragraphs: [
+          "If you choose to bet, you do so at your own risk and only with money you can afford to lose. Gambling can be addictive.",
+        ],
+        bullets: [
+          "Never chase losses and never borrow money to bet.",
+          "Set a budget and a time limit before you start, and stick to them.",
+          "Long combinations pay more because they lose more often — the probability we show for each combination is an honest estimate.",
+          "Take regular breaks. Gambling must never interfere with your work, family, studies or finances.",
+          "If gambling stops being fun, stop. Use the self-exclusion and limit tools of your betting platform and seek help from a qualified support service or health professional.",
+        ],
+      },
+      {
+        id: "user",
+        title: "5. Your responsibility and applicable law",
+        paragraphs: [
+          "Laws on sports betting differ from one country to another. It is your sole responsibility to check that betting is legal where you live, that you meet the legal age and other conditions, and to use only operators that are licensed in your jurisdiction.",
+          "Any bet you place is a contract exclusively between you and the operator concerned. O-Jester is not a party to it and has no control over it.",
+        ],
+      },
+      {
+        id: "liability",
+        title: "6. Limitation of liability",
+        paragraphs: [
+          "The service is provided “as is” and “as available”, without warranty of any kind. To the fullest extent permitted by applicable law, O-Jester, its owners, employees and partners shall not be liable for any direct or indirect loss or damage — including any loss of money resulting from betting — arising from the use of, or reliance on, the content of the service, or from any error, omission, delay or interruption.",
+        ],
+      },
+      {
+        id: "terms",
+        title: "7. Subscriptions and payments",
+        paragraphs: [
+          "Subscriptions are one-off payments granting 30 days of access to the features of the chosen plan. They do not renew automatically. Upgrades take effect immediately and the unused value of the previous plan is converted pro rata into additional days; renewals and downgrades start when the current period ends.",
+          "Because access is delivered digitally and immediately, payments are non-refundable, except where required by applicable law or in the event of a billing error. Accounts are personal: sharing an account or redistributing our content commercially is prohibited and may lead to suspension.",
+        ],
+      },
+      {
+        id: "privacy",
+        title: "8. Privacy",
+        paragraphs: [
+          "We collect your name, email address, optional phone number, date of birth (to verify that you are an adult) and your subscription and payment history. Card and Mobile Money details are processed by our payment providers (Flutterwave, PayPal) and never stored on our servers.",
+          "We use a single secure session cookie to keep you signed in, and store your language and age-confirmation choices on your device. We do not sell your personal data. You may request access to or deletion of your data at any time by contacting the publisher.",
+        ],
+      },
+    ],
+  },
+  fr: {
+    title: "Mentions légales et avertissement",
+    intro:
+      "Veuillez lire attentivement le présent avertissement avant d'utiliser O-Jester. En accédant au service ou en l'utilisant, vous reconnaissez l'avoir lu, compris et accepté dans son intégralité. Si vous ne l'acceptez pas, vous ne devez pas utiliser le service.",
+    updated: "Dernière mise à jour",
+    publisher: "Éditeur",
+    sections: [
+      {
+        id: "notice",
+        title: "1. Nature du service — O-Jester n'est pas un opérateur de paris",
+        paragraphs: [
+          "O-Jester est un service d'information et d'analyse qui publie des pronostics de football basés sur des matchs réels. O-Jester n'est ni un bookmaker, ni un opérateur de paris, ni un casino, ni un établissement de jeux, ni un intermédiaire, ni un conseiller financier.",
+          "O-Jester n'accepte aucun pari, ne perçoit aucune mise, ne détient aucun fonds destiné au jeu et ne verse aucun gain. O-Jester n'est affilié à aucun bookmaker, championnat, compétition ou club, et n'est ni parrainé ni approuvé par eux. Les noms des équipes et des compétitions sont utilisés à des fins d'identification uniquement.",
+          "Les frais d'abonnement rémunèrent exclusivement l'accès à un contenu éditorial (pronostics, statistiques et analyses). Ils ne constituent pas des mises et ne donnent jamais droit à un quelconque gain.",
+        ],
+      },
+      {
+        id: "disclaimer",
+        title: "2. Absence de garantie — limites des modèles statistiques et de l'intelligence artificielle",
+        paragraphs: [
+          "Tous les pronostics, probabilités, indices de confiance, combinaisons et analyses sont des estimations produites par des modèles statistiques et par une intelligence artificielle (notamment Claude, un modèle développé par Anthropic). Ce sont des opinions sur des événements futurs incertains, et non des affirmations de fait.",
+          "L'intelligence artificielle peut se tromper. Elle peut mal interpréter une information, s'appuyer sur des sources incomplètes, obsolètes ou erronées, ou produire des erreurs. Les données des matchs et les cotes sont fournies par des prestataires tiers et peuvent être retardées, incomplètes ou inexactes.",
+          "Aucun résultat n'est jamais garanti. Les performances passées, y compris notre historique publié, ne préjugent pas des résultats futurs. Aucun contenu d'O-Jester ne constitue un conseil financier, d'investissement ou professionnel. Vous ne devez pas fonder une décision uniquement sur notre contenu.",
+        ],
+      },
+      {
+        id: "minors",
+        title: "3. Protection des mineurs — strictement interdit aux moins de 18 ans",
+        warning: true,
+        paragraphs: [
+          "AVERTISSEMENT : les paris, jeux d'argent et jeux de hasard sont interdits aux personnes âgées de moins de dix-huit (18) ans. L'accès à O-Jester est strictement réservé aux personnes majeures de 18 ans et plus.",
+          "En utilisant le service, vous déclarez sur l'honneur être âgé(e) d'au moins 18 ans. L'inscription exige votre date de naissance et est automatiquement refusée à toute personne de moins de 18 ans. Tout compte appartenant à un mineur sera immédiatement fermé. Fournir de fausses informations sur votre âge constitue un manquement grave aux présentes conditions et peut engager votre responsabilité personnelle.",
+          "Faciliter ou encourager le jeu d'argent chez les mineurs peut constituer une infraction au regard de la loi applicable. Les parents et tuteurs sont vivement encouragés à surveiller l'activité en ligne des mineurs dont ils ont la charge et à utiliser des outils de contrôle parental. O-Jester décline toute responsabilité en cas d'utilisation du service par un mineur en violation des présentes conditions ou au moyen de fausses informations sur l'âge.",
+        ],
+      },
+      {
+        id: "responsible",
+        title: "4. Jeu responsable",
+        paragraphs: [
+          "Si vous choisissez de parier, vous le faites à vos propres risques et uniquement avec de l'argent que vous pouvez vous permettre de perdre. Le jeu peut créer une dépendance.",
+        ],
+        bullets: [
+          "Ne cherchez jamais à « vous refaire » et n'empruntez jamais d'argent pour parier.",
+          "Fixez un budget et une limite de temps avant de commencer, et respectez-les.",
+          "Les longs combinés rapportent plus parce qu'ils perdent plus souvent — la probabilité affichée pour chaque combinaison est une estimation honnête.",
+          "Faites des pauses régulières. Le jeu ne doit jamais nuire à votre travail, votre famille, vos études ou vos finances.",
+          "Si le jeu cesse d'être un plaisir, arrêtez. Utilisez les outils d'auto-exclusion et de limites de votre plateforme de paris et demandez de l'aide à un service d'accompagnement qualifié ou à un professionnel de santé.",
+        ],
+      },
+      {
+        id: "user",
+        title: "5. Votre responsabilité et la loi applicable",
+        paragraphs: [
+          "La législation sur les paris sportifs varie d'un pays à l'autre. Il vous appartient exclusivement de vérifier que les paris sont légaux là où vous vivez, que vous remplissez la condition d'âge et les autres conditions légales, et de n'utiliser que des opérateurs agréés dans votre juridiction.",
+          "Tout pari que vous placez constitue un contrat conclu exclusivement entre vous et l'opérateur concerné. O-Jester n'y est pas partie et n'exerce aucun contrôle sur celui-ci.",
+        ],
+      },
+      {
+        id: "liability",
+        title: "6. Limitation de responsabilité",
+        paragraphs: [
+          "Le service est fourni « en l'état » et « selon disponibilité », sans garantie d'aucune sorte. Dans toute la mesure permise par la loi applicable, O-Jester, ses propriétaires, salariés et partenaires ne sauraient être tenus responsables d'aucune perte ou d'aucun dommage, direct ou indirect — y compris toute perte d'argent résultant de paris — découlant de l'utilisation du contenu du service ou de la confiance qui lui est accordée, ou de toute erreur, omission, retard ou interruption.",
+        ],
+      },
+      {
+        id: "terms",
+        title: "7. Abonnements et paiements",
+        paragraphs: [
+          "Les abonnements sont des paiements uniques donnant accès pendant 30 jours aux fonctionnalités de la formule choisie. Ils ne se renouvellent pas automatiquement. Le passage à une formule supérieure prend effet immédiatement et la valeur non utilisée de la formule précédente est convertie au prorata en jours supplémentaires ; les renouvellements et le passage à une formule inférieure prennent effet à la fin de la période en cours.",
+          "L'accès étant fourni numériquement et immédiatement, les paiements ne sont pas remboursables, sauf lorsque la loi applicable l'exige ou en cas d'erreur de facturation. Les comptes sont personnels : le partage de compte ou la redistribution commerciale de nos contenus est interdit et peut entraîner une suspension.",
+        ],
+      },
+      {
+        id: "privacy",
+        title: "8. Confidentialité",
+        paragraphs: [
+          "Nous collectons votre nom, votre adresse e-mail, votre numéro de téléphone (facultatif), votre date de naissance (afin de vérifier votre majorité) ainsi que l'historique de vos abonnements et paiements. Les données de carte et de Mobile Money sont traitées par nos prestataires de paiement (Flutterwave, PayPal) et ne sont jamais stockées sur nos serveurs.",
+          "Nous utilisons un unique cookie de session sécurisé pour maintenir votre connexion, et conservons sur votre appareil vos choix de langue et de confirmation d'âge. Nous ne vendons pas vos données personnelles. Vous pouvez à tout moment demander l'accès à vos données ou leur suppression en contactant l'éditeur.",
+        ],
+      },
+    ],
+  },
+};

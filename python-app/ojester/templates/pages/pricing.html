@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import alert %}
+{% from "partials/cards.html" import plan_cards %}
+{% block title %}{{ _('nav.pricing') }}{% endblock %}
+{% block content %}
+<div class="container page">
+  <div class="center" style="max-width:640px;margin:0 auto">
+    <h1 style="font-size:2.3rem">{{ _('pricing.title') }}</h1>
+    <p class="muted mt-2">{{ _('pricing.sub') }}</p>
+  </div>
+  <div class="mt-4">{{ plan_cards(plans, highlight) }}</div>
+  <p class="tiny dim center mt-3">{{ _('pricing.legal') }}</p>
+
+  <section class="mt-4">
+    <h2 class="mt-4" style="margin-bottom:14px">{{ _('pricing.compare') }}</h2>
+    {% set rows = [
+      ('pricing.row.leagues', 'pricing.c.leagues1', 'pricing.c.leagues2', 'pricing.c.leagues3'),
+      ('pricing.row.markets', 'pricing.c.markets1', 'pricing.c.markets2', 'pricing.c.markets3'),
+      ('pricing.row.combos', '2', '5', '9'),
+      ('pricing.row.value', '—', '✓', '✓'),
+      ('pricing.row.ai', '—', 'pricing.c.ai2', 'pricing.c.ai3'),
+      ('pricing.row.builder', '—', 'pricing.c.builder2', 'pricing.c.builder3'),
+      ('pricing.row.tomorrow', '—', '—', 'pricing.c.tomorrow3'),
+      ('pricing.row.history', 'pricing.c.history1', 'pricing.c.history2', 'pricing.c.history3')] %}
+    <div class="card table-wrap">
+      <table class="table">
+        <thead><tr><th>{{ _('pricing.feature') }}</th><th class="c-starter">{{ plan_name('STARTER') }} · {{ fmt_xaf(1000) }}</th><th class="c-pro">{{ plan_name('PRO') }} · {{ fmt_xaf(2000) }}</th><th class="c-elite">{{ plan_name('ELITE') }} · {{ fmt_xaf(5000) }}</th></tr></thead>
+        <tbody>
+          {% for r in rows %}<tr><td class="first">{{ _(r[0]) }}</td>{% for c in r[1:] %}<td>{{ _(c) if '.' in c else c }}</td>{% endfor %}</tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="tiny dim mt-2">{{ _('pricing.aiOptional') }}</p>
+  </section>
+
+  <section class="mt-4">
+    <h2 class="mt-4" style="margin-bottom:14px">{{ _('pricing.coverage') }}</h2>
+    <div class="grid grid-3">
+      {% for tier in [1, 2, 3] %}
+      <div class="card card-pad">
+        <h3 class="{{ ['c-starter', 'c-pro', 'c-elite'][tier - 1] }}">{{ _('pricing.tier%d'|format(tier)) }}</h3>
+        <ul class="small muted mt-2" style="list-style:none;padding:0;display:grid;gap:6px">
+          {% for lg in leagues[tier] %}<li>{{ lg.name }} <span class="dim">· {{ lg.country }}</span></li>{% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

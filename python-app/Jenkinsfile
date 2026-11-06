@@ -1,0 +1,153 @@
+// O-Jester CI/CD pipeline (Jenkins Multibranch Pipeline + Kubernetes plugin).
+//
+//  every branch / PR : checkout → tests → security audit → validate Kubernetes manifests → build image
+//  main              : … → push image → deploy to STAGING → smoke tests
+//                      → manual approval → deploy to PRODUCTION → smoke tests (auto-rollback on failure)
+//
+// Jenkins setup (see deploy/README.md):
+//  - plugins: Pipeline, Kubernetes, Git, Credentials Binding, JUnit, Timestamper
+//  - Secret file credentials: kubeconfig-staging, kubeconfig-production
+//  - Kubernetes Secret `registry-credentials` (docker-registry) in the Jenkins agents' namespace
+
+pipeline {
+  agent {
+    kubernetes {
+      yamlFile 'jenkins/agent-pod.yaml'
+      defaultContainer 'python'
+    }
+  }
+
+  options {
+    skipDefaultCheckout(true)
+    timestamps()
+    timeout(time: 60, unit: 'MINUTES')
+    buildDiscarder(logRotator(numToKeepStr: '30'))
+    disableConcurrentBuilds(abortPrevious: true)
+  }
+
+  environment {
+    IMAGE = 'ghcr.io/obblysfinanceltd-byte/o-jester'
+    KUBECTL_VERSION = 'v1.37.1'
+    PATH = "/tmp/bin:${env.PATH}"
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        container('jnlp') {
+          checkout scm
+          script {
+            env.GIT_SHORT = sh(script: 'git rev-parse --short=8 HEAD', returnStdout: true).trim()
+            def branch = (env.BRANCH_NAME ?: 'main').replaceAll('[^A-Za-z0-9_.-]', '-').toLowerCase()
+            env.IMAGE_TAG = "${branch}-${env.GIT_SHORT}"
+            currentBuild.displayName = "#${env.BUILD_NUMBER} ${env.IMAGE_TAG}"
+          }
+        }
+      }
+    }
+
+    stage('Install & unit tests') {
+      steps {
+        sh '''
+          python -m venv /tmp/venv
+          . /tmp/venv/bin/activate
+          pip install -q -r requirements-dev.txt
+          python -m compileall -q ojester run.py manage.py
+          mkdir -p reports
+          python -m pytest -q --junitxml=reports/junit.xml
+        '''
+      }
+      post {
+        always { junit allowEmptyResults: true, testResults: 'reports/junit.xml' }
+      }
+    }
+
+    stage('Security audit') {
+      steps {
+        // Known-vulnerable dependencies mark the build UNSTABLE (visible) without blocking it.
+        catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+          sh '''
+            . /tmp/venv/bin/activate
+            pip install -q pip-audit
+            pip-audit -r requirements.txt --progress-spinner off
+          '''
+        }
+      }
+    }
+
+    stage('Validate Kubernetes manifests') {
+      steps {
+        sh '''
+          mkdir -p /tmp/bin
+          python3 - <<'PY'
+import hashlib, os, urllib.request
+v = os.environ["KUBECTL_VERSION"]
+base = f"https://dl.k8s.io/release/{v}/bin/linux/amd64/kubectl"
+data = urllib.request.urlopen(base, timeout=120).read()
+expected = urllib.request.urlopen(base + ".sha256", timeout=60).read().decode().split()[0]
+assert hashlib.sha256(data).hexdigest() == expected, "kubectl checksum mismatch"
+open("/tmp/bin/kubectl", "wb").write(data)
+os.chmod("/tmp/bin/kubectl", 0o755)
+PY
+          kubectl version --client
+          for env in staging production; do
+            kubectl kustomize deploy/k8s/overlays/$env > /tmp/$env.yaml
+            echo "$env: $(grep -c '^kind:' /tmp/$env.yaml) resources rendered"
+          done
+        '''
+      }
+    }
+
+    stage('Build image') {
+      steps {
+        container('kaniko') {
+          script {
+            def push = env.BRANCH_NAME == 'main'
+            def destinations = push ? "--destination=${env.IMAGE}:${env.IMAGE_TAG} --destination=${env.IMAGE}:latest" : '--no-push'
+            sh """
+              /kaniko/executor \
+                --context="${env.WORKSPACE}" \
+                --dockerfile="${env.WORKSPACE}/Dockerfile" \
+                ${destinations} \
+                --cache=${push} --cache-repo=${env.IMAGE}-cache \
+                --label=org.opencontainers.image.revision=${env.GIT_SHORT} \
+                --label=org.opencontainers.image.source=https://github.com/obblysfinanceltd-byte/o-jester
+            """
+          }
+        }
+      }
+    }
+
+    stage('Deploy to staging') {
+      when { branch 'main' }
+      steps {
+        withCredentials([file(credentialsId: 'kubeconfig-staging', variable: 'KUBECONFIG')]) {
+          sh 'bash deploy/scripts/deploy.sh staging "$IMAGE:$IMAGE_TAG"'
+        }
+      }
+    }
+
+    stage('Approve production') {
+      when { branch 'main' }
+      options { timeout(time: 24, unit: 'HOURS') }
+      steps {
+        input message: "Deploy ${env.IMAGE_TAG} to PRODUCTION?", ok: 'Deploy', submitter: 'admin,release-managers'
+      }
+    }
+
+    stage('Deploy to production') {
+      when { branch 'main' }
+      steps {
+        withCredentials([file(credentialsId: 'kubeconfig-production', variable: 'KUBECONFIG')]) {
+          sh 'bash deploy/scripts/deploy.sh production "$IMAGE:$IMAGE_TAG"'
+        }
+      }
+    }
+  }
+
+  post {
+    success { echo "✅ ${env.IMAGE_TAG ?: 'build'} passed." }
+    unstable { echo '⚠️ Build is unstable — check the security audit stage.' }
+    failure { echo '❌ Build failed — see the stage logs above.' }
+  }
+}

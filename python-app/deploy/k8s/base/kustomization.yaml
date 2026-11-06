@@ -1,0 +1,30 @@
+# O-Jester — base Kubernetes resources shared by every environment.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: o-jester
+      app.kubernetes.io/part-of: o-jester
+    includeSelectors: true
+
+resources:
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - hpa.yaml
+  - pdb.yaml
+  - cronjobs.yaml
+
+# Non-secret settings. Kustomize appends a content hash to the name, so changing
+# a value automatically rolls the pods. Secrets live in the `o-jester-secrets` Secret.
+configMapGenerator:
+  - name: o-jester-config
+    envs:
+      - config.env
+
+images:
+  - name: o-jester
+    newName: ghcr.io/obblysfinanceltd-byte/o-jester
+    newTag: latest

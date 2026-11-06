@@ -1,0 +1,27 @@
+# Web pods accept traffic only on the app port; background jobs accept none.
+# Outbound traffic stays open: the app must reach the football data APIs,
+# payment providers, the database and (optionally) the Claude API.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: o-jester-web
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: web
+  policyTypes: ["Ingress"]
+  ingress:
+    - ports:
+        - port: 5080
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: o-jester-worker
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: worker
+  policyTypes: ["Ingress"]
+  ingress: []

@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: o-jester-web
+  labels:
+    app.kubernetes.io/component: web
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0 # zero-downtime deploys
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: web
+    spec:
+      serviceAccountName: o-jester
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: registry-pull # create once per namespace — see deploy/README.md
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: o-jester
+              app.kubernetes.io/component: web
+      initContainers:
+        # 1. Wait for the database, 2. create tables + admin account (idempotent).
+        - name: wait-db
+          image: o-jester
+          command: ["python", "manage.py", "wait-db", "180"]
+          envFrom: &env
+            - configMapRef:
+                name: o-jester-config
+            - secretRef:
+                name: o-jester-secrets
+          securityContext: &containerSecurity
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts: &mounts
+            - name: instance
+              mountPath: /app/instance
+            - name: tmp
+              mountPath: /tmp
+          resources: &smallResources
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+        - name: migrate
+          image: o-jester
+          command: ["python", "manage.py", "init-db"]
+          envFrom: *env
+          securityContext: *containerSecurity
+          volumeMounts: *mounts
+          resources: *smallResources
+      containers:
+        - name: web
+          image: o-jester
+          ports:
+            - name: http
+              containerPort: 5080
+          envFrom: *env
+          securityContext: *containerSecurity
+          volumeMounts: *mounts
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/ready # also checks the database
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              # Let the load balancer stop sending traffic before the process exits.
+              exec:
+                command: ["sleep", "5"]
+      volumes:
+        - name: instance
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

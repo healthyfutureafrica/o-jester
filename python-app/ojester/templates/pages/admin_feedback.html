@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ _('feedback.adminTitle') }}{% endblock %}
+{% block content %}
+<div class="container page">
+  <div class="row between" style="align-items:flex-end;margin-bottom:18px">
+    <div>
+      <a class="small dim" href="{{ url_for('admin.dashboard') }}">← {{ _('admin.title') }}</a>
+      <h1 class="mt-1">{{ _('feedback.adminTitle') }}</h1>
+      <p class="small muted mt-1">{{ _('feedback.adminStats', n=total, avg=('%.1f'|format(avg) if avg else '—')) }}</p>
+    </div>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('feedback.admin_csv') }}">⬇ CSV</a>
+  </div>
+  <nav class="tabs" style="flex-wrap:wrap;margin-bottom:18px">
+    <a href="{{ url_for('feedback.admin_list') }}" class="{{ 'on' if not category }}">{{ _('feedback.all') }} ({{ total }})</a>
+    {% for c in categories %}<a href="{{ url_for('feedback.admin_list', category=c) }}" class="{{ 'on' if category == c }}">{{ _('feedback.cat.' ~ c) }} ({{ by_cat.get(c, 0) }})</a>{% endfor %}
+  </nav>
+  {% if items %}
+  <div class="stack">
+    {% for f in items %}
+    <article class="card card-pad">
+      <div class="row between">
+        <div class="row" style="gap:8px">
+          <span class="c-gold" style="letter-spacing:2px" aria-label="{{ f.rating }}/5">{{ '★' * f.rating }}<span class="dim">{{ '★' * (5 - f.rating) }}</span></span>
+          <span class="badge badge-gold">{{ _('feedback.cat.' ~ f.category) }}</span>
+          <span class="badge">{{ f.lang|upper }}</span>
+        </div>
+        <span class="tiny dim">{{ fmt_datetime(f.created_at) }}</span>
+      </div>
+      <p class="mt-2" style="white-space:pre-wrap">{{ f.message }}</p>
+      <p class="tiny dim mt-2">
+        {{ f.name or _('feedback.anonymous') }}{% if f.contact %} · {{ f.contact }}{% endif %}{% if f.page %} · {{ f.page }}{% endif %}
+      </p>
+      {% if f.device %}<p class="tiny dim truncate" title="{{ f.device }}">{{ f.device }}</p>{% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card card-pad center"><div style="font-size:2rem">📭</div><p class="muted mt-1">{{ _('feedback.none') }}</p></div>
+  {% endif %}
+</div>
+{% endblock %}

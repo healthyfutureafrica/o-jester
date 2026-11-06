@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ _('feedback.thanksTitle') }}{% endblock %}
+{% block content %}
+<div class="container page" style="display:flex;justify-content:center">
+  <div class="card card-pad center" style="max-width:460px;width:100%;padding:34px">
+    <div style="font-size:3rem">🙏</div>
+    <h1 class="mt-2">{{ _('feedback.thanksTitle') }}</h1>
+    <p class="muted mt-2">{{ _('feedback.thanksBody') }}</p>
+    <div class="row mt-3" style="justify-content:center">
+      <a class="btn btn-primary" href="{{ back }}">{{ _('feedback.continue') }}</a>
+      <a class="btn btn-outline" href="{{ url_for('feedback.form') }}">{{ _('feedback.another') }}</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

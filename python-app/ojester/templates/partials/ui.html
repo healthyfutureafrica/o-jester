@@ -1,0 +1,93 @@
+{# Reusable UI components (Jinja macros). #}
+
+{% macro plan_badge(plan) -%}
+<span class="badge {{ {'STARTER': 'badge-starter', 'PRO': 'badge-pro', 'ELITE': 'badge-elite'}[plan] }}">{{ plan_name(plan) }}</span>
+{%- endmacro %}
+
+{% macro lang_switch() -%}
+<span class="lang-switch" role="group" aria-label="{{ _('nav.language') }}">
+  {% for code in ['fr', 'en'] %}<a href="{{ url_for('public.set_lang', code=code, next=request.full_path.rstrip('?')) }}" class="{{ 'on' if g.lang == code }}" hreflang="{{ code }}">{{ code }}</a>{% endfor %}
+</span>
+{%- endmacro %}
+
+{% macro csrf() %}<input type="hidden" name="csrf" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro disclaimer() -%}
+<div class="disclaimer">
+  <span class="age-tag">18+</span>
+  <span class="text">{{ _('disclaimer.bar') }}</span>
+  <a href="{{ url_for('public.legal') }}#disclaimer">{{ _('disclaimer.readMore') }}</a>
+</div>
+{%- endmacro %}
+
+{% macro ai_notice() -%}
+<p class="ai-notice"><span aria-hidden="true">ⓘ</span><span>{{ _('ai.mistakes') }}</span></p>
+{%- endmacro %}
+
+{% macro alert(text, tone='info') -%}
+{% if text %}<div class="alert alert-{{ tone }}">{{ text }}</div>{% endif %}
+{%- endmacro %}
+
+{% macro prob_bar(p) -%}
+<div>
+  <div class="probbar"><div class="h" style="width:{{ [p.home * 100, 4]|max }}%"></div><div class="d" style="width:{{ [p.draw * 100, 4]|max }}%"></div><div class="a" style="width:{{ [p.away * 100, 4]|max }}%"></div></div>
+  <div class="problabels"><span><b class="c-accent">1</b> {{ (p.home * 100)|round|int }}%</span><span><b>X</b> {{ (p.draw * 100)|round|int }}%</span><span><b class="c-starter">2</b> {{ (p.away * 100)|round|int }}%</span></div>
+</div>
+{%- endmacro %}
+
+{% macro ring(value, size=52) -%}
+{% set r = (size - 6) / 2 %}{% set c = 2 * 3.14159 * r %}
+{% set color = '#ffc845' if value >= 70 else ('#c9963f' if value >= 55 else '#f87171') %}
+<div class="ring" style="width:{{ size }}px;height:{{ size }}px" title="{{ _('ui.confidence') }} {{ value }}/100">
+  <svg width="{{ size }}" height="{{ size }}"><circle cx="{{ size/2 }}" cy="{{ size/2 }}" r="{{ r }}" stroke="#1f2858" stroke-width="5" fill="none"/>
+  <circle cx="{{ size/2 }}" cy="{{ size/2 }}" r="{{ r }}" stroke="{{ color }}" stroke-width="5" fill="none" stroke-dasharray="{{ c }}" stroke-dashoffset="{{ c * (1 - value / 100) }}" stroke-linecap="round"/></svg>
+  <span>{{ value }}</span>
+</div>
+{%- endmacro %}
+
+{% macro stance(s) -%}
+<span class="badge {{ {'BACK': 'badge-green', 'LEAN': 'badge-gold', 'AVOID': 'badge-red'}[s] }}">✦ {{ _('stance.' ~ s) }}</span>
+{%- endmacro %}
+
+{% macro result_badge(r) -%}
+{% if r == 'WON' %}<span class="badge badge-green">✓ {{ _('result.WON') }}</span>
+{% elif r == 'LOST' %}<span class="badge badge-red">✗ {{ _('result.LOST') }}</span>
+{% elif r == 'VOID' %}<span class="badge">{{ _('result.VOID') }}</span>
+{% elif r == 'SETTLED' %}<span class="badge badge-blue">{{ _('result.SETTLED') }}</span>
+{% else %}<span class="badge badge-blue">{{ _('result.PENDING') }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro status_label(m) -%}
+{% if m.status == 'FINISHED' %}<span class="badge">{{ _('ui.ft') }} {{ m.home_goals }}-{{ m.away_goals }}</span>
+{% elif m.status == 'LIVE' %}<span class="badge badge-red">● {{ _('status.LIVE') }}{% if m.home_goals is not none %} {{ m.home_goals }}-{{ m.away_goals }}{% endif %}</span>
+{% elif m.status == 'POSTPONED' %}<span class="badge badge-gold">{{ _('status.POSTPONED') }}</span>
+{% elif m.status == 'CANCELLED' %}<span class="badge badge-red">{{ _('status.CANCELLED') }}</span>
+{% else %}<span class="small strong muted">{{ fmt_time(m.kickoff) }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro upgrade(plan, reason=None, compact=False) -%}
+{% if reason == 'EARLY_ACCESS' %}{% set text = _('lock.early') %}{% elif reason == 'SUBSCRIBE' %}{% set text = _('lock.subscribe') %}{% else %}{% set text = _('lock.plan', plan=plan_name(plan)) %}{% endif %}
+<div class="{{ 'upgrade' if compact else 'center stack' }}">
+  <p class="small muted">🔒 {{ text }}</p>
+  <a class="btn btn-sm {{ 'btn-gold' if plan == 'ELITE' else 'btn-primary' }}" href="{{ url_for('public.pricing', plan=plan) }}">{{ _('lock.seePlans') if reason == 'SUBSCRIBE' else _('lock.upgradeTo', plan=plan_name(plan)) }}</a>
+</div>
+{%- endmacro %}
+
+{% macro day_tabs(tabs, day, endpoint) -%}
+<nav class="tabs" aria-label="date">
+  {% for d, key in tabs %}<a href="{{ url_for(endpoint, date=d) }}" class="{{ 'on' if d == day }}">{{ _(key) }}</a>{% endfor %}
+</nav>
+{%- endmacro %}
+
+{% macro copy_tools(id, title, legs, total=None) -%}
+<textarea id="{{ id }}" class="hide" readonly>🃏 {{ _('copy.header') }} · {{ title }}
+{% for l in legs %}{{ loop.index }}. {{ l.home_team }} – {{ l.away_team }} ({{ fmt_time(l.kickoff) }}) — {{ l.short }} · {{ l.label }} @ {{ l.odds|odds }}
+{% endfor %}{% if total %}{{ _('copy.total') }}: {{ total|odds }}
+{% endif %}{{ _('copy.footer') }}</textarea>
+<a class="btn btn-outline btn-sm" target="_blank" rel="noopener" href="https://wa.me/?text={{ ('🃏 ' ~ _('copy.header') ~ ' · ' ~ title ~ '\n' ~ legs|map(attribute='label')|join('\n') ~ '\n' ~ _('copy.footer'))|urlencode }}">{{ _('ui.share') }}</a>
+<button type="button" class="btn btn-outline btn-sm hide" data-copy="{{ id }}" data-copied="✓ {{ _('ui.copied') }}">⧉ {{ _('ui.copy') }}</button>
+{%- endmacro %}
+
+{% macro team(name, logo) -%}
+<div class="team">{% if logo %}<img src="{{ logo }}" alt="" loading="lazy">{% else %}<span class="crest" aria-hidden="true">{{ name[:2]|upper }}</span>{% endif %}<span class="truncate">{{ name }}</span></div>
+{%- endmacro %}

@@ -1,0 +1,26 @@
+{
+  "name": "o-jester",
+  "version": "1.0.0",
+  "private": true,
+  "description": "O-Jester — AI-powered soccer prediction and winning-combination platform",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c green,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w server && npm run build -w client",
+    "start": "npm run start -w server",
+    "test": "npm test -w server",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
+    "db:push": "npm run db:push -w server",
+    "refresh": "npm run refresh -w server",
+    "create-admin": "npm run create-admin -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

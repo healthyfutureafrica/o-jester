@@ -1,0 +1,174 @@
+// O-Jester data model.
+// SQLite is used for local development. For production switch `provider` to
+// "postgresql" and point DATABASE_URL at your Postgres instance — the schema
+// deliberately avoids provider-specific types (enums/JSON are stored as String).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String         @id @default(cuid())
+  email           String         @unique
+  passwordHash    String
+  name            String
+  phone           String?
+  birthDate       DateTime? // required at signup; must be 18+
+  termsAcceptedAt DateTime? // acceptance of terms, disclaimer and 18+ declaration
+  country         String         @default("CM")
+  role            String         @default("USER") // USER | ADMIN
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  subscriptions   Subscription[]
+  payments        Payment[]
+  aiUsage         AiUsage[]
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan      String // STARTER | PRO | ELITE
+  status    String   @default("ACTIVE") // ACTIVE | SUPERSEDED | CANCELLED
+  source    String   @default("PAYMENT") // PAYMENT | ADMIN_GRANT
+  startsAt  DateTime
+  endsAt    DateTime
+  paymentId String?  @unique
+  payment   Payment? @relation(fields: [paymentId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([userId, endsAt])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan           String
+  amountXaf      Int
+  chargeAmount   String // amount actually charged, in chargeCurrency (decimal string)
+  chargeCurrency String // XAF | EUR | USD
+  method         String // MOBILE_MONEY | CARD | PAYPAL
+  provider       String // FLUTTERWAVE | PAYPAL | SANDBOX
+  reference      String        @unique
+  providerRef    String?
+  status         String        @default("PENDING") // PENDING | SUCCEEDED | FAILED | CANCELLED
+  failureReason  String?
+  meta           String? // JSON
+  createdAt      DateTime      @default(now())
+  completedAt    DateTime?
+  subscription   Subscription?
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model AiUsage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // SLIP_REVIEW
+  createdAt DateTime @default(now())
+
+  @@index([userId, kind, createdAt])
+}
+
+model Match {
+  id         String           @id @default(cuid())
+  externalId String           @unique // "<provider>:<id>"
+  leagueKey  String
+  leagueName String
+  country    String
+  kickoff    DateTime
+  matchDate  String // local calendar date (APP_TIMEZONE), YYYY-MM-DD
+  status     String // SCHEDULED | LIVE | FINISHED | POSTPONED | CANCELLED
+  homeTeam   String
+  awayTeam   String
+  homeLogo   String?
+  awayLogo   String?
+  homeGoals  Int? // 90-minute score, used for settlement
+  awayGoals  Int?
+  odds       String? // JSON BookOdds
+  teamStats  String? // JSON MatchStatsInput
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  prediction Prediction?
+  selections ComboSelection[]
+
+  @@index([matchDate])
+  @@index([status, kickoff])
+}
+
+model Prediction {
+  id           String    @id @default(cuid())
+  matchId      String    @unique
+  match        Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  lambdaHome   Float
+  lambdaAway   Float
+  markets      String // JSON MarketProb[]
+  topScores    String // JSON
+  bestMarket   String
+  bestProb     Float
+  confidence   Int
+  dataQuality  String // HIGH | MEDIUM | LOW
+  meta         String // JSON (model components, disagreement)
+  summary      String // JSON {en, fr}
+  aiAnalysis   String? // JSON MatchAnalysis
+  aiModel      String?
+  aiAnalyzedAt DateTime?
+  modelVersion String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Combo {
+  id            String           @id @default(cuid())
+  date          String
+  type          String
+  minPlan       String
+  kind          String // ACCA | SINGLES
+  title         String
+  description   String
+  totalOdds     Float
+  probability   Float
+  oddsEstimated Boolean          @default(false)
+  status        String           @default("PENDING") // PENDING | WON | LOST | VOID | SETTLED
+  createdAt     DateTime         @default(now())
+  selections    ComboSelection[]
+
+  @@unique([date, type])
+  @@index([date])
+}
+
+model ComboSelection {
+  id            String  @id @default(cuid())
+  comboId       String
+  combo         Combo   @relation(fields: [comboId], references: [id], onDelete: Cascade)
+  matchId       String
+  match         Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  market        String
+  label         String
+  odds          Float
+  probability   Float
+  oddsEstimated Boolean @default(false)
+  result        String  @default("PENDING") // PENDING | WON | LOST | VOID
+  position      Int
+
+  @@index([matchId])
+}
+
+model JobRun {
+  id         String    @id @default(cuid())
+  name       String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  ok         Boolean?
+  detail     String?
+
+  @@index([name, startedAt])
+}

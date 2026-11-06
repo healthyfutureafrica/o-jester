@@ -1,0 +1,68 @@
+# STAGING / BETA — testers' environment: in-cluster PostgreSQL, beta banner + feedback,
+# free trial for testers, simulated payments. Deployed automatically from `main`.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: o-jester-staging
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+components:
+  - ../../components/postgres
+
+labels:
+  - pairs:
+      app.kubernetes.io/instance: staging
+
+configMapGenerator:
+  - name: o-jester-config
+    behavior: merge
+    literals:
+      - APP_URL=https://beta.o-jester.com
+      - BETA_MODE=true
+      - PAYMENTS_SANDBOX=true
+      - PAYPAL_MODE=sandbox
+
+patches:
+  - target:
+      kind: Deployment
+      name: o-jester-web
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: o-jester-web
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 2
+  - target:
+      kind: Ingress
+      name: o-jester
+    patch: |-
+      - op: replace
+        path: /spec/tls/0/hosts
+        value: ["beta.o-jester.com"]
+      - op: replace
+        path: /spec/rules
+        value:
+          - host: beta.o-jester.com
+            http:
+              paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: o-jester-web
+                      port:
+                        name: http
+      - op: replace
+        path: /spec/tls/0/secretName
+        value: o-jester-beta-tls

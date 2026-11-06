@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import alert, csrf %}
+{% block title %}{{ _('auth.login') }}{% endblock %}
+{% block content %}
+<div class="container page" style="display:flex;justify-content:center">
+  <div class="card card-pad" style="max-width:440px;width:100%;padding:30px">
+    <h1>{{ _('auth.welcome') }}</h1>
+    <p class="small muted mt-1">{{ _('auth.welcomeSub') }}</p>
+    <form method="post" class="stack mt-3">{{ csrf() }}
+      {{ alert(error, 'error') }}
+      <div><label class="label" for="email">{{ _('auth.email') }}</label><input class="input" id="email" name="email" type="email" autocomplete="email" required value="{{ email }}"></div>
+      <div><label class="label" for="password">{{ _('auth.password') }}</label><input class="input" id="password" name="password" type="password" autocomplete="current-password" required></div>
+      <button class="btn btn-primary btn-lg btn-block">{{ _('auth.login') }}</button>
+    </form>
+    <p class="small muted center mt-3">{{ _('auth.new') }} <a class="link strong" href="{{ url_for('account.register', **request.args) }}">{{ _('auth.create') }}</a></p>
+  </div>
+</div>
+{% endblock %}

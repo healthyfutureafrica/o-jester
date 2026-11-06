@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="{{ g.lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>18+ · O-Jester</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+{% from "partials/ui.html" import lang_switch %}
+<main class="gate">
+  <div class="card card-pad" style="max-width:520px;width:100%;padding:30px">
+    <div class="row between"><span class="age-tag lg">18+</span>{{ lang_switch() }}</div>
+    {% if denied %}
+      <h1 class="mt-3">{{ _('ageGate.blockedTitle') }}</h1>
+      <p class="mt-2 muted">{{ _('ageGate.blockedBody') }}</p>
+    {% else %}
+      <h1 class="mt-3">{{ _('ageGate.title') }}</h1>
+      <p class="mt-2 muted">{{ _('ageGate.body1') }}</p>
+      <p class="mt-2 muted">{{ _('ageGate.body2') }}</p>
+      <form method="post" action="{{ url_for('public.age_gate') }}" class="grid grid-2 mt-3" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ next or '/' }}">
+        <button class="btn btn-primary btn-lg" name="answer" value="adult">{{ _('ageGate.confirm') }}</button>
+        <button class="btn btn-outline btn-lg" name="answer" value="minor">{{ _('ageGate.deny') }}</button>
+      </form>
+    {% endif %}
+    <a class="tiny dim mt-3" style="display:inline-block;text-decoration:underline" href="{{ url_for('public.legal') }}#minors">{{ _('ageGate.legal') }}</a>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,98 @@
+{% from "partials/ui.html" import plan_badge, result_badge, upgrade, copy_tools, prob_bar, ring, stance, status_label, team %}
+
+{% macro combo_card(c) -%}
+{% set acca = c.kind == 'ACCA' %}
+<article class="card" style="display:flex;flex-direction:column;overflow:hidden">
+  <div class="card-head combo-head {{ c.min_plan }}">
+    <div class="row between" style="align-items:flex-start">
+      <div style="min-width:0;flex:1">
+        <div class="row" style="gap:6px">{{ plan_badge(c.min_plan) }}{% if c.provisional and not c.locked %}<span class="badge badge-blue">{{ _('combo.provisional') }}</span>{% endif %}{% if c.status != 'PENDING' %}{{ result_badge(c.status) }}{% endif %}</div>
+        <h3 class="mt-1">{{ c.title }}</h3>
+        <p class="small muted">{{ c.description }}</p>
+      </div>
+      <div style="text-align:right">
+        <div class="upper">{{ _('combo.totalOdds') if acca else _('combo.avgOdds') }}</div>
+        <div class="display big c-gold">{{ c.total_odds|odds }}</div>
+        <div class="tiny dim">{{ _('combo.winChance') if acca else _('combo.avgChance') }} {{ fmt_pct(c.probability, 1 if c.probability < 0.1 else 0) }}</div>
+      </div>
+    </div>
+  </div>
+  {% if c.locked %}
+    <div class="locked-box" style="flex:1">
+      <div class="blur" aria-hidden="true">{% for i in range(c.count) %}<div><span>████████ – ████████</span><b>1X @ 1.45</b></div>{% endfor %}</div>
+      <div class="over"><div>{{ upgrade(c.min_plan, c.lock_reason) }}<p class="tiny dim mt-1">{{ _('combo.inside', n=c.count) }}</p></div></div>
+    </div>
+  {% else %}
+    <div class="divide" style="flex:1">
+      {% for s in c.selections %}
+      <div class="leg">
+        <div style="min-width:0">
+          <a class="small strong truncate" style="display:block" href="{{ url_for('tips.match', match_id=s.match_id) }}">{{ s.home_team }} <span class="dim">{{ _('ui.vs') }}</span> {{ s.away_team }}</a>
+          <div class="tiny dim truncate">{{ s.league_name }} · {% if s.score %}{{ _('ui.ft') }} {{ s.score }}{% else %}{{ fmt_time(s.kickoff) }}{% endif %}</div>
+          <div class="tiny muted mt-1">{{ s.label }}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="odds-chip"><span class="c-accent">{{ s.short }}</span><span class="dim">@</span><span>{{ s.odds|odds }}</span></div>
+          <div class="tiny dim mt-1">{% if s.result != 'PENDING' %}{{ result_badge(s.result) }}{% else %}{{ fmt_pct(s.probability) }}{% endif %}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="card-foot row between">
+      <span class="tiny dim">{% if c.odds_estimated %}{{ _('combo.estimated') }}{% endif %}{{ _('combo.singles') if not acca else _('combo.acca', n=c.count) }}{% if c.status == 'SETTLED' %}{{ _('combo.wonOf', won=c.won_count, n=c.count) }}{% endif %}</span>
+      <div class="row" style="gap:8px">{{ copy_tools('copy-' ~ c.id, c.title, c.selections, c.total_odds if acca else None) }}</div>
+    </div>
+  {% endif %}
+</article>
+{%- endmacro %}
+
+{% macro match_card(m) -%}
+{% set p = m.prediction %}
+<article class="card card-pad" style="padding:16px">
+  <a href="{{ url_for('tips.match', match_id=m.id) }}" style="display:block">
+    <div class="row between" style="flex-wrap:nowrap">
+      <div class="stack" style="min-width:0;flex:1;--gap:6px">{{ team(m.home_team, m.home_logo) }}<div style="margin-top:6px">{{ team(m.away_team, m.away_logo) }}</div></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">{{ status_label(m) }}{% if p %}{{ ring(p.confidence, 44) }}{% endif %}</div>
+    </div>
+    {% if p %}
+      <div class="mt-3">{{ prob_bar(p.probs) }}</div>
+      {% if p.best_pick %}
+      <div class="pick mt-2">
+        <div style="min-width:0"><div class="upper">{{ _('match.aiPick') }}</div><div class="small strong truncate">{{ p.best_pick.label }}</div></div>
+        <div style="text-align:right"><div class="small strong"><span class="c-accent">{{ p.best_pick.short }}</span>{% if p.best_pick.book_odds %} <span class="c-gold">@ {{ p.best_pick.book_odds|odds }}</span>{% endif %}</div>
+        <div class="tiny dim">{{ _('match.chance', p=fmt_pct(p.best_pick.probability)) }}</div></div>
+      </div>
+      {% endif %}
+      <div class="row mt-2" style="gap:6px">
+        {% if p.ai_stance %}{{ stance(p.ai_stance) }}{% endif %}
+        {% if p.best_pick and p.best_pick.result %}{{ result_badge(p.best_pick.result) }}{% endif %}
+        {% if p.best_pick and p.best_pick.edge and p.best_pick.edge > 0.02 %}<span class="badge badge-gold">{{ _('match.value', p=fmt_pct(p.best_pick.edge)) }}</span>{% endif %}
+        <span class="tiny dim">xG {{ '%.1f'|format(p.xg.home) }} – {{ '%.1f'|format(p.xg.away) }}</span>
+      </div>
+    {% endif %}
+  </a>
+  {% if m.locked %}<div class="mt-3">{{ upgrade(m.required_plan, m.lock_reason, compact=True) }}</div>
+  {% elif not p and m.status == 'SCHEDULED' %}<p class="tiny dim mt-2">{{ _('match.soon') }}</p>{% endif %}
+</article>
+{%- endmacro %}
+
+{% macro plan_cards(plans, highlight=None) -%}
+{% set rank = {'STARTER': 1, 'PRO': 2, 'ELITE': 3} %}
+<div class="grid grid-3" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+  {% for p in plans %}
+  {% set current = g.plan == p.id %}{% set accent = {'STARTER': 'c-starter', 'PRO': 'c-pro', 'ELITE': 'c-elite'}[p.id] %}
+  <div class="card plan-card {{ p.id }} {{ 'hl' if highlight == p.id }}">
+    {% if p.popular %}<span class="ribbon">{{ _('plans.popular') }}</span>{% endif %}
+    <div class="row between"><h3 class="{{ accent }}" style="font-size:1.3rem">{{ p.name[g.lang] }}</h3>{% if current %}<span class="badge badge-green">{{ _('plans.current') }}</span>{% endif %}</div>
+    <p class="small muted mt-1">{{ p.tagline[g.lang] }}</p>
+    <div class="mt-3"><span class="display" style="font-size:2.2rem">{{ fmt_xaf(p.price_xaf) }}</span><span class="small dim">{{ _('plans.perMonth') }}</span></div>
+    <ul>{% for f in p.features[g.lang] %}<li><span class="{{ accent }}">✓</span><span>{{ f }}</span></li>{% endfor %}</ul>
+    {% if current %}{% set cta = _('plans.renew') %}
+    {% elif g.plan and rank[p.id] > rank[g.plan] %}{% set cta = _('plans.upgrade', plan=p.name[g.lang]) %}
+    {% elif g.plan %}{% set cta = _('plans.switch', plan=p.name[g.lang]) %}
+    {% else %}{% set cta = _('plans.get', plan=p.name[g.lang]) %}{% endif %}
+    <a class="btn btn-lg btn-block {{ {'STARTER': 'btn-outline', 'PRO': 'btn-primary', 'ELITE': 'btn-elite'}[p.id] }}" href="{{ url_for('account.checkout', plan=p.id) if g.user else url_for('account.register', plan=p.id) }}">{{ cta }}</a>
+  </div>
+  {% endfor %}
+</div>
+{%- endmacro %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import alert, csrf, plan_badge %}
+{% block title %}{{ _('account.title') }}{% endblock %}
+{% block content %}
+<div class="container page">
+  <h1>{{ _('account.title') }}</h1>
+  <p class="small muted mt-1">{{ g.user.email }}</p>
+  <div class="stack mt-3">{{ alert(message, 'success') }}{{ alert(error, 'error') }}</div>
+  <div class="grid grid-2 mt-3">
+    <section class="card card-pad">
+      <h2>{{ _('account.subscription') }}</h2>
+      {% if sub %}
+        <div class="row mt-2">{{ plan_badge(sub.plan) }}<span class="small muted">{{ _('account.activeUntil') }} <b style="color:var(--ink-100)">{{ fmt_date(sub.ends_at) }}</b> · {{ _('account.daysLeft', n=sub.days_left) }}</span></div>
+        <div class="meter mt-3"><div style="width:{{ [100, sub.days_left / 30 * 100]|min }}%"></div></div>
+        {% for q in sub.queued %}<p class="small muted mt-2">{{ _('account.then', plan=plan_name(q.plan), **{'from': fmt_date(q.starts_at), 'to': fmt_date(q.ends_at)}) }}</p>{% endfor %}
+        <div class="row mt-3">
+          <a class="btn btn-primary btn-sm" href="{{ url_for('account.checkout', plan=sub.plan) }}">{{ _('account.renew') }}</a>
+          {% if sub.plan != 'ELITE' %}<a class="btn btn-gold btn-sm" href="{{ url_for('public.pricing') }}">{{ _('account.upgrade') }}</a>{% endif %}
+        </div>
+      {% else %}
+        <p class="small muted mt-2">{{ _('account.none') }}</p>
+        <a class="btn btn-primary mt-3" href="{{ url_for('public.pricing') }}">{{ _('account.choose') }}</a>
+      {% endif %}
+    </section>
+
+    <section class="card card-pad">
+      <h2>{{ _('account.profile') }}</h2>
+      <form method="post" class="stack mt-2">{{ csrf() }}<input type="hidden" name="action" value="profile">
+        <div><label class="label" for="name">{{ _('account.name') }}</label><input class="input" id="name" name="name" value="{{ g.user.name }}"></div>
+        <div><label class="label" for="phone">{{ _('auth.phone') }}</label><input class="input" id="phone" name="phone" placeholder="+237 6XX XXX XXX" value="{{ g.user.phone or '' }}"></div>
+        <button class="btn btn-primary">{{ _('account.save') }}</button>
+      </form>
+    </section>
+
+    <section class="card card-pad">
+      <h2>{{ _('account.payments') }}</h2>
+      {% if payments %}
+      <div class="table-wrap mt-2">
+        <table class="table" style="min-width:460px">
+          <thead><tr><th>{{ _('account.col.date') }}</th><th>{{ _('account.col.plan') }}</th><th>{{ _('account.col.amount') }}</th><th>{{ _('account.col.method') }}</th><th>{{ _('account.col.status') }}</th></tr></thead>
+          <tbody>
+          {% for p in payments %}
+            <tr><td>{{ fmt_date(p.created_at) }}</td><td>{{ plan_name(p.plan) }}</td><td>{{ fmt_xaf(p.amount_xaf) if p.charge_currency == 'XAF' else p.charge_amount ~ ' ' ~ p.charge_currency }}</td><td>{{ _('checkout.m.' ~ p.method) }}</td>
+            <td><span class="badge {{ {'SUCCEEDED': 'badge-green', 'PENDING': 'badge-blue', 'FAILED': 'badge-red'}.get(p.status, '') }}">{{ _('pay.status.' ~ p.status) }}</span></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<p class="small dim mt-2">{{ _('account.noPayments') }}</p>{% endif %}
+    </section>
+
+    <section class="card card-pad">
+      <h2>{{ _('account.password') }}</h2>
+      <form method="post" class="stack mt-2">{{ csrf() }}<input type="hidden" name="action" value="password">
+        <div><label class="label" for="current">{{ _('account.current') }}</label><input class="input" id="current" name="current" type="password" autocomplete="current-password" required></div>
+        <div><label class="label" for="new">{{ _('account.new') }}</label><input class="input" id="new" name="new" type="password" autocomplete="new-password" minlength="8" required></div>
+        <button class="btn btn-outline">{{ _('account.update') }}</button>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+# Public HTTPS entry point. No ingressClassName is set, so the cluster's default
+# IngressClass is used (Traefik, HAProxy, a cloud load balancer…). TLS certificates are
+# issued by cert-manager; the host is set per environment in the overlays.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: o-jester
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+    - hosts:
+        - www.o-jester.com
+        - o-jester.com
+      secretName: o-jester-tls
+  rules:
+    - host: www.o-jester.com
+      http:
+        paths: &paths
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: o-jester-web
+                port:
+                  name: http
+    - host: o-jester.com
+      http:
+        paths: *paths

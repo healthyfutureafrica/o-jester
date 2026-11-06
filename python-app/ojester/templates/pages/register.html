@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import alert, csrf %}
+{% block title %}{{ _('auth.create') }}{% endblock %}
+{% macro err(k) %}{% if errors.get(k) %}<p class="field-error">{{ errors[k] }}</p>{% endif %}{% endmacro %}
+{% block content %}
+<div class="container page" style="display:flex;justify-content:center">
+  <div class="card card-pad" style="max-width:460px;width:100%;padding:30px">
+    <h1>{{ _('auth.registerTitle') }}</h1>
+    <p class="small muted mt-1">{{ _('auth.registerSub') }}</p>
+    <form method="post" class="stack mt-3">{{ csrf() }}
+      {{ alert(error, 'error') }}
+      <div><label class="label" for="name">{{ _('auth.name') }}</label><input class="input" id="name" name="name" autocomplete="name" required value="{{ form.name }}">{{ err('name') }}</div>
+      <div><label class="label" for="email">{{ _('auth.email') }}</label><input class="input" id="email" name="email" type="email" autocomplete="email" required value="{{ form.email }}">{{ err('email') }}</div>
+      <div>
+        <label class="label" for="birth_date">{{ _('auth.birthDate') }}</label>
+        <input class="input" id="birth_date" name="birth_date" type="date" autocomplete="bday" required max="{{ max_birth }}" value="{{ form.birth_date }}">
+        <p class="help">{{ _('auth.birthDateHelp') }}</p>{{ err('birth_date') }}
+      </div>
+      <div><label class="label" for="phone">{{ _('auth.phone') }} <span class="dim">{{ _('auth.optional') }}</span></label><input class="input" id="phone" name="phone" type="tel" placeholder="+237 6XX XXX XXX" autocomplete="tel" value="{{ form.phone }}">{{ err('phone') }}</div>
+      <div><label class="label" for="password">{{ _('auth.password') }}</label><input class="input" id="password" name="password" type="password" autocomplete="new-password" minlength="8" required><p class="help">{{ _('auth.passwordHelp') }}</p>{{ err('password') }}</div>
+      <label class="check">
+        <input type="checkbox" name="accept_terms" value="yes" required>
+        <span>{{ _('auth.accept1') }} <b style="color:var(--ink-100)">{{ _('auth.accept18') }}</b> {{ _('auth.accept2') }} <a class="link" href="{{ url_for('public.legal') }}#terms" target="_blank">{{ _('auth.acceptTerms') }}</a> {{ _('auth.acceptAnd') }} <a class="link" href="{{ url_for('public.legal') }}" target="_blank">{{ _('auth.acceptDisclaimer') }}</a>{{ _('auth.accept3') }}</span>
+      </label>
+      {{ err('accept_terms') }}
+      <button class="btn btn-primary btn-lg btn-block">{{ _('auth.createBtn') }}</button>
+    </form>
+    <p class="small muted center mt-3">{{ _('auth.have') }} <a class="link strong" href="{{ url_for('account.login') }}">{{ _('auth.login') }}</a></p>
+  </div>
+</div>
+{% endblock %}

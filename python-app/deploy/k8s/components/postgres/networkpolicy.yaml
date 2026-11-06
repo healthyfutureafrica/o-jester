@@ -1,0 +1,18 @@
+# Only O-Jester pods (web + jobs) may connect to the database.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: o-jester-postgres
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: database
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: o-jester
+      ports:
+        - port: 5432
+          protocol: TCP
