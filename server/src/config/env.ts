@@ -41,9 +41,14 @@ const schema = z
 
     // Payments
     PAYMENTS_SANDBOX: bool(!isProd),
-    // API Manager base/context URL before /api/order; access tokens remain server-side.
+    // API Manager base/context URL before /api/order; credentials remain server-side.
     ENKAP_API_BASE_URL: optionalString,
+    ENKAP_TOKEN_URL: optionalString,
     ENKAP_ACCESS_TOKEN: optionalString,
+    ENKAP_CONSUMER_KEY: optionalString,
+    ENKAP_CONSUMER_SECRET: optionalString,
+    ENKAP_API_KEY: optionalString,
+    ENKAP_API_SECRET: optionalString,
     FLUTTERWAVE_SECRET_KEY: optionalString,
     FLUTTERWAVE_WEBHOOK_HASH: optionalString,
     PAYPAL_CLIENT_ID: optionalString,
@@ -68,8 +73,15 @@ const schema = z
           ctx.addIssue({ code: "custom", path: ["ENKAP_API_BASE_URL"], message: "must be a valid HTTPS URL" });
         }
       }
-      if (!e.ENKAP_ACCESS_TOKEN) {
-        ctx.addIssue({ code: "custom", path: ["ENKAP_ACCESS_TOKEN"], message: "required when PAYMENTS_SANDBOX=false" });
+      const hasAccessToken = Boolean(e.ENKAP_ACCESS_TOKEN);
+      const hasConsumerCredentials = Boolean(e.ENKAP_TOKEN_URL && e.ENKAP_CONSUMER_KEY && e.ENKAP_CONSUMER_SECRET);
+      const hasApiCredentials = Boolean(e.ENKAP_API_KEY && e.ENKAP_API_SECRET);
+      if (!hasAccessToken && !hasConsumerCredentials && !hasApiCredentials) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["ENKAP_ACCESS_TOKEN"],
+          message: "required when PAYMENTS_SANDBOX=false; provide ENKAP_ACCESS_TOKEN, or ENKAP_TOKEN_URL + ENKAP_CONSUMER_KEY + ENKAP_CONSUMER_SECRET, or ENKAP_API_KEY + ENKAP_API_SECRET",
+        });
       }
     }
     if (e.FOOTBALL_PROVIDER === "api-football" && !e.API_FOOTBALL_KEY) {

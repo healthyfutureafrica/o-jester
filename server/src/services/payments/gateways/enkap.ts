@@ -18,24 +18,58 @@ interface EnkapOrderDetails {
   };
 }
 
+async function getEnkapAccessToken(): Promise<string> {
+  if (env.ENKAP_ACCESS_TOKEN) return env.ENKAP_ACCESS_TOKEN;
+
+  if (!env.ENKAP_TOKEN_URL || !env.ENKAP_CONSUMER_KEY || !env.ENKAP_CONSUMER_SECRET) {
+    throw new Error("ENKAP_TOKEN_URL, ENKAP_CONSUMER_KEY and ENKAP_CONSUMER_SECRET must be configured when ENKAP_ACCESS_TOKEN is absent");
+  }
+
+  const tokenResponse = await fetch(env.ENKAP_TOKEN_URL, {
+    method: "POST",
+    signal: AbortSignal.timeout(30_000),
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${env.ENKAP_CONSUMER_KEY}:${env.ENKAP_CONSUMER_SECRET}`).toString("base64")}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+    },
+    body: new URLSearchParams({ grant_type: "client_credentials" }).toString(),
+  });
+
+  const tokenData = (await tokenResponse.json().catch(() => ({}))) as { access_token?: string; error?: string; error_description?: string };
+  if (!tokenResponse.ok || !tokenData.access_token) {
+    throw new Error(`ENKAP token request failed: ${tokenData.error_description ?? tokenData.error ?? `HTTP ${tokenResponse.status}`}`);
+  }
+
+  return tokenData.access_token;
+}
+
 async function enkapRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  if (!env.ENKAP_API_BASE_URL || !env.ENKAP_ACCESS_TOKEN) {
-    throw new Error("ENKAP_API_BASE_URL and ENKAP_ACCESS_TOKEN must be configured");
+  const hasAccessToken = Boolean(env.ENKAP_ACCESS_TOKEN);
+  const hasConsumerCredentials = Boolean(env.ENKAP_TOKEN_URL && env.ENKAP_CONSUMER_KEY && env.ENKAP_CONSUMER_SECRET);
+  const hasApiCredentials = Boolean(env.ENKAP_API_KEY && env.ENKAP_API_SECRET);
+  if (!env.ENKAP_API_BASE_URL || (!hasAccessToken && !hasConsumerCredentials && !hasApiCredentials)) {
+    throw new Error("ENKAP_API_BASE_URL and valid ENKAP credentials must be configured");
   }
 
   const apiBase = new URL(env.ENKAP_API_BASE_URL);
   if (apiBase.protocol !== "https:") throw new Error("ENKAP_API_BASE_URL must use HTTPS");
   const baseUrl = apiBase.toString().replace(/\/+$/, "");
+  const accessToken = await getEnkapAccessToken();
+
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,
     signal: AbortSignal.timeout(30_000),
     headers: {
-      Authorization: `Bearer ${env.ENKAP_ACCESS_TOKEN}`,
+      Authorization: `Bearer ${accessToken}`,
+      ...(env.ENKAP_API_KEY ? { "X-API-Key": env.ENKAP_API_KEY } : {}),
+      ...(env.ENKAP_API_SECRET ? { "X-API-Secret": env.ENKAP_API_SECRET } : {}),
       Accept: "application/json",
       ...(init.body ? { "Content-Type": "application/json" } : {}),
       ...init.headers,
     },
   });
+
   const body = (await response.json().catch(() => ({}))) as T & { message?: string };
   if (!response.ok) {
     throw new Error(`ENKAP ${path}: ${body.message ?? `HTTP ${response.status}`}`);
