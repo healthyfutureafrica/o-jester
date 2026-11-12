@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { env } from "../config/env.js";
 import { PLAN_IDS } from "../config/plans.js";
@@ -52,14 +52,19 @@ paymentsRouter.post("/payments/sandbox/complete", requireAuth, async (req, res) 
 // --- Provider webhooks (authenticated by signature, exempt from CSRF guard) ---------
 
 paymentsRouter.get("/payments/enkap/return/:reference", (req, res) => {
-  res.redirect(302, `${env.APP_URL.replace(/\/+$/, "")}/payment/return?reference=${encodeURIComponent(String(req.params.reference))}`);
+  const returnUrl = new URL("/payment/return", env.APP_URL);
+  returnUrl.searchParams.set("reference", String(req.params.reference));
+  res.redirect(302, returnUrl.toString());
 });
 
-paymentsRouter.put("/payments/webhooks/enkap/:reference", async (req, res) => {
+function handleEnkapWebhook(req: Request, res: Response) {
   const reference = String(req.params.reference);
   res.status(200).json({ received: true });
-  verifyPayment(reference).catch((err) => log.error(`ENKAP notification verification failed for ${reference}`, err));
-});
+  void verifyPayment(reference).catch((err) => log.error(`ENKAP notification verification failed for ${reference}`, err));
+}
+
+paymentsRouter.post("/payments/webhooks/enkap/:reference", handleEnkapWebhook);
+paymentsRouter.put("/payments/webhooks/enkap/:reference", handleEnkapWebhook);
 
 paymentsRouter.post("/payments/webhooks/flutterwave", async (req, res) => {
   if (!env.FLUTTERWAVE_WEBHOOK_HASH || req.get("verif-hash") !== env.FLUTTERWAVE_WEBHOOK_HASH) {

@@ -1,14 +1,17 @@
 import type { Payment } from "@prisma/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../src/config/env.js", () => ({
-  env: {
-    API_URL: "https://api.example.test",
-    APP_URL: "https://app.example.test",
-    ENKAP_ACCESS_TOKEN: "test-access-token",
-    ENKAP_API_BASE_URL: "https://enkap.example.test/context",
-  },
+const mockedEnv = vi.hoisted(() => ({
+  API_URL: "https://api.example.test",
+  APP_URL: "https://app.example.test",
+  ENKAP_ACCESS_TOKEN: "test-access-token" as string | undefined,
+  ENKAP_API_BASE_URL: "https://enkap.example.test/context",
+  ENKAP_TOKEN_URL: "https://enkap.example.test/token",
+  ENKAP_CONSUMER_KEY: "test-consumer-key",
+  ENKAP_CONSUMER_SECRET: "test-consumer-secret",
 }));
+
+vi.mock("../src/config/env.js", () => ({ env: mockedEnv }));
 
 import { enkapGateway } from "../src/services/payments/gateways/enkap.js";
 
@@ -67,9 +70,58 @@ describe("ENKAP gateway", () => {
       currency: "XAF",
       merchantReference: payment.reference,
       totalAmount: payment.amountXaf,
-      returnUrl: "https://api.example.test/api/payments/enkap/return",
-      notificationUrl: "https://api.example.test/api/payments/webhooks/enkap",
+      returnUrl: `https://api.example.test/api/payments/enkap/return/${payment.reference}`,
+      notificationUrl: `https://api.example.test/api/payments/webhooks/enkap/${payment.reference}`,
     });
+  });
+
+  it("exchanges consumer credentials for a token when no static token is configured", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "exchanged-token" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            orderTransactionId: "enkap-tx-1",
+            merchantReferenceId: payment.reference,
+            redirectUrl: "https://payment.enkap.example.test/checkout/enkap-tx-1",
+          }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const staticToken = mockedEnv.ENKAP_ACCESS_TOKEN;
+    mockedEnv.ENKAP_ACCESS_TOKEN = undefined;
+
+    try {
+      await enkapGateway.createCheckout({
+        payment,
+        method: "ENKAP",
+        planName: "Pro",
+        user: { id: payment.userId, name: "Test User", email: "test@example.test", phone: null },
+      });
+    } finally {
+      mockedEnv.ENKAP_ACCESS_TOKEN = staticToken;
+    }
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [tokenUrl, tokenOptions] = fetchMock.mock.calls[0];
+    expect(String(tokenUrl)).toBe("https://enkap.example.test/token");
+    expect(tokenOptions).toMatchObject({
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${Buffer.from("test-consumer-key:test-consumer-secret").toString("base64")}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: "grant_type=client_credentials",
+    });
+    const [, orderOptions] = fetchMock.mock.calls[1];
+    expect(orderOptions.headers).toMatchObject({ Authorization: "Bearer exchanged-token" });
   });
 
   it("confirms only provider-reported payments matching the merchant reference", async () => {

@@ -25,7 +25,10 @@ async function getEnkapAccessToken(): Promise<string> {
     throw new Error("ENKAP_TOKEN_URL, ENKAP_CONSUMER_KEY and ENKAP_CONSUMER_SECRET must be configured when ENKAP_ACCESS_TOKEN is absent");
   }
 
-  const tokenResponse = await fetch(env.ENKAP_TOKEN_URL, {
+  const tokenUrl = new URL(env.ENKAP_TOKEN_URL);
+  if (tokenUrl.protocol !== "https:") throw new Error("ENKAP_TOKEN_URL must use HTTPS");
+
+  const tokenResponse = await fetch(tokenUrl, {
     method: "POST",
     signal: AbortSignal.timeout(30_000),
     headers: {
@@ -47,8 +50,7 @@ async function getEnkapAccessToken(): Promise<string> {
 async function enkapRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const hasAccessToken = Boolean(env.ENKAP_ACCESS_TOKEN);
   const hasConsumerCredentials = Boolean(env.ENKAP_TOKEN_URL && env.ENKAP_CONSUMER_KEY && env.ENKAP_CONSUMER_SECRET);
-  const hasApiCredentials = Boolean(env.ENKAP_API_KEY && env.ENKAP_API_SECRET);
-  if (!env.ENKAP_API_BASE_URL || (!hasAccessToken && !hasConsumerCredentials && !hasApiCredentials)) {
+  if (!env.ENKAP_API_BASE_URL || (!hasAccessToken && !hasConsumerCredentials)) {
     throw new Error("ENKAP_API_BASE_URL and valid ENKAP credentials must be configured");
   }
 
@@ -97,8 +99,9 @@ export const enkapGateway: PaymentGateway = {
 
   async createCheckout(ctx: CheckoutContext) {
     const { payment, user } = ctx;
-    const returnUrl = `${env.API_URL.replace(/\/+$/, "")}/api/payments/enkap/return`;
-    const notificationUrl = `${env.API_URL.replace(/\/+$/, "")}/api/payments/webhooks/enkap`;
+    const callbackReference = encodeURIComponent(payment.reference);
+    const returnUrl = `${env.API_URL.replace(/\/+$/, "")}/api/payments/enkap/return/${callbackReference}`;
+    const notificationUrl = `${env.API_URL.replace(/\/+$/, "")}/api/payments/webhooks/enkap/${callbackReference}`;
     const response = await enkapRequest<EnkapOrderResponse>("/api/order", {
       method: "POST",
       body: JSON.stringify({

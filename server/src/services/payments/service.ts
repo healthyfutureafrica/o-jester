@@ -30,7 +30,7 @@ export function paymentMethods() {
 }
 
 function gatewayFor(method: PayMethod): PaymentGateway {
-  if (paymentConfig.sandbox) return sandboxGateway;
+  if (paymentConfig.sandbox && !paymentConfig.enkap) return sandboxGateway;
   if (method !== "ENKAP" || !paymentConfig.enkap) {
     throw new HttpError(503, "payment.methodUnavailable", "METHOD_UNAVAILABLE");
   }

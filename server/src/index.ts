@@ -11,8 +11,9 @@ const log = createLogger("server");
 const server = createApp().listen(env.PORT, () => {
   log.info(`O-Jester API listening on ${env.API_URL} (${env.NODE_ENV})`);
   log.info(`data: ${footballProvider.name} · AI: ${aiEnabled ? env.AI_MODEL : "off"}`);
+  const paymentMode = paymentConfig.sandbox ? (paymentConfig.enkap ? "ENKAP sandbox" : "local sandbox") : "live";
   log.info(
-    `payments: ${paymentConfig.sandbox ? "SANDBOX" : "live"} · flutterwave ${paymentConfig.flutterwave ? "on" : "off"} · paypal ${paymentConfig.paypal ? "on" : "off"}`,
+    `payments: ${paymentMode} · ENKAP ${paymentConfig.enkap ? "on" : "off"} · flutterwave ${paymentConfig.flutterwave ? "on" : "off"} · paypal ${paymentConfig.paypal ? "on" : "off"}`,
   );
   if (env.NODE_ENV === "production" && paymentConfig.sandbox) log.warn("PAYMENTS_SANDBOX is enabled in production!");
   if (env.ENABLE_SCHEDULER) startScheduler().catch((err) => log.error("scheduler failed to start", err));

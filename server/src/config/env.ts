@@ -75,12 +75,11 @@ const schema = z
       }
       const hasAccessToken = Boolean(e.ENKAP_ACCESS_TOKEN);
       const hasConsumerCredentials = Boolean(e.ENKAP_TOKEN_URL && e.ENKAP_CONSUMER_KEY && e.ENKAP_CONSUMER_SECRET);
-      const hasApiCredentials = Boolean(e.ENKAP_API_KEY && e.ENKAP_API_SECRET);
-      if (!hasAccessToken && !hasConsumerCredentials && !hasApiCredentials) {
+      if (!hasAccessToken && !hasConsumerCredentials) {
         ctx.addIssue({
           code: "custom",
           path: ["ENKAP_ACCESS_TOKEN"],
-          message: "required when PAYMENTS_SANDBOX=false; provide ENKAP_ACCESS_TOKEN, or ENKAP_TOKEN_URL + ENKAP_CONSUMER_KEY + ENKAP_CONSUMER_SECRET, or ENKAP_API_KEY + ENKAP_API_SECRET",
+          message: "provide ENKAP_ACCESS_TOKEN or ENKAP_TOKEN_URL + ENKAP_CONSUMER_KEY + ENKAP_CONSUMER_SECRET",
         });
       }
     }
@@ -104,7 +103,10 @@ export const isProduction = env.NODE_ENV === "production";
 
 export const paymentConfig = {
   sandbox: env.PAYMENTS_SANDBOX,
-  enkap: Boolean(env.ENKAP_API_BASE_URL && env.ENKAP_ACCESS_TOKEN),
+  enkap: Boolean(
+    env.ENKAP_API_BASE_URL &&
+      (env.ENKAP_ACCESS_TOKEN || (env.ENKAP_TOKEN_URL && env.ENKAP_CONSUMER_KEY && env.ENKAP_CONSUMER_SECRET)),
+  ),
   flutterwave: Boolean(env.FLUTTERWAVE_SECRET_KEY),
   paypal: Boolean(env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET),
 };
